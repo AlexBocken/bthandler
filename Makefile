@@ -1,10 +1,10 @@
 # bthandler
 # See LICENSE file for copyright and license details.
 
-VERSION = 1.0
+VERSION = 1.1
 
 # paths
-PREFIX = ~/.local/bin
+PREFIX = ~/.local/bin/tools
 
 SRC = bthandler
 OBJ = $(SRC:.c=.o)

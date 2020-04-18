@@ -1,32 +1,33 @@
-#!/bin/zsh
+#!/bin/bash
 #wait time to discover new devices in seconds
 SCAN_PERIOD=5
+BLACKLIST=$HOME/.local/bin/tools/bt_blacklist
+
 IDS=$(bluetoothctl paired-devices | awk '{print $2}')
 echo $IDS > /tmp/bt_IDS
 Devices=$(bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' | sed 's/ $//')
 echo $Devices > /tmp/bt_devices
-
+Blacklist='MX Master\n'
+Devices=$( echo $Devices | grep -vf $BLACKLIST )
 actions="\nturn off\nturn on\nscan on\npair"
-choice=$( echo $Devices$actions | dmenu -p 'BT:' )
+choice=$( printf "$Devices$actions" | dmenu -i -p 'What BT action would you like to perform:' )
 
 cleanup(){
 	rm -f /tmp/bt_devices
 	rm -f /tmp/bt_IDS
 	rm -f /tmp/paired_devices
+	exit
 }
 
 
 case $choice in
 	"turn on") bluetoothctl power on
-		cleanup
-		exit;;
+		cleanup;;
 	"turn off") bluetoothctl power off
-		cleanup
-		exit;;
+		cleanup;;
 	"scan on") bluetoothctl power on && echo power on && sleep 2
 		st -e bluetoothctl scan on
-		cleanup
-		exit;;
+		cleanup;;
 	"pair") bluetoothctl power on
 		bluetoothctl scan on & disown
 		notify-send "Bluetooth" "Searching for devices, please wait a bit"
