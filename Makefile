@@ -1,7 +1,10 @@
 # bthandler
 # See LICENSE file for copyright and license details.
 
-include config.mk
+VERSION = 1.0
+
+# paths
+PREFIX = ~/.local/bin
 
 SRC = bthandler
 OBJ = $(SRC:.c=.o)
