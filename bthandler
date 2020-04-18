@@ -1,0 +1,63 @@
+#!/bin/zsh
+#wait time to discover new devices in seconds
+SCAN_PERIOD=5
+IDS=$(bluetoothctl paired-devices | awk '{print $2}')
+echo $IDS > /tmp/bt_IDS
+Devices=$(bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' | sed 's/ $//')
+echo $Devices > /tmp/bt_devices
+actions="\nturn off\nturn on\nscan on\npair"
+choice=$( echo $Devices$actions | dmenu -p 'BT:' )
+echo choice: $choice"test"
+
+cleanup(){
+	rm -f /tmp/bt_devices
+	rm -f /tmp/bt_IDS
+	rm -f /tmp/paired_devices
+}
+
+
+case $choice in
+	"turn on") bluetoothctl power on
+		cleanup
+		exit;;
+	"turn off") bluetoothctl power off
+		cleanup
+		exit;;
+	"scan on") bluetoothctl power on && echo power on && sleep 2
+		st -e bluetoothctl scan on
+		cleanup
+		exit;;
+	"pair") bluetoothctl power on
+		bluetoothctl scan on & disown
+		notify-send "Bluetooth" "Searching for devices, please wait a bit"
+		sleep $SCAN_PERIOD
+		all_devices=$(bluetoothctl devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}')
+		bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/paired_devices
+		new_devices=$(echo $all_devices | grep -vf /tmp/paired_devices)
+		choice=$( echo $new_devices | dmenu -l 10 -p 'pair with which device?:' )
+		if [ -n "$choice" ]; then
+			bluetoothctl devices | awk '{print $2}' > /tmp/bt_IDS
+			choice=$( echo $choice | sed 's/ $//')
+			dev_no=$(echo $all_devices | cat -n | grep "$choice" | awk '{print $1}')
+			echo device_no: $dev_no"neger"
+			dev_id=$(cat -n /tmp/bt_IDS | grep -E $dev_no"[[:space:]]" | awk '{print $2}' )
+			echo dev_id: $dev_id"test"
+			bluetoothctl pair $dev_id && sleep 2
+			bluetoothctl connect $dev_id
+			bluetoothctl scan off
+		fi
+		cleanup;;
+
+esac
+
+if [ -n "$choice" ]; then
+	choice=$( echo $choice | sed 's/ $//')
+	dev_no=$(cat -n /tmp/bt_devices | grep "$choice" | awk '{print $1}')
+	echo device_no: $dev_no
+	dev_id=$(cat -n /tmp/bt_IDS | grep $dev_no | awk '{print $2}')
+	echo dev_id: $dev_id"test"
+	bluetoothctl power on
+	bluetoothctl connect $dev_id
+fi
+
+cleanup
