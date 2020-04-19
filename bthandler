@@ -2,14 +2,14 @@
 #wait time to discover new devices in seconds
 SCAN_PERIOD=5
 BLACKLIST=$HOME/.local/bin/tools/bt_blacklist
-IDS=$(bluetoothctl paired-devices | awk '{print $2}')
-echo $IDS > /tmp/bt_IDS
-bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/bt_devices
-Devices=$(cat /tmp/bt_devices)
-disp_devices=$(cat /tmp/bt_devices)
-grep -vf "$BLACKLIST" /tmp/bt_devices > /tmp/disp_devices
-len=$(cat /tmp/disp_devices | wc -l)
 actions="turn off\nturn on\nscan on\npair"
+
+bluetoothctl paired-devices | awk '{print $2}' > /tmp/bt_IDS
+bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/paired_devices
+grep -vf "$BLACKLIST" /tmp/paired_devices > /tmp/disp_devices
+
+#Don't print empty device list, removes unnecessary empty choice in dmenu
+len=$(cat /tmp/disp_devices | wc -l)
 [ $len -gt 0 ] && choice=$( printf "$(cat /tmp/disp_devices)\n$actions" | dmenu -i -p 'What BT action would you like to perform:' )
 [ $len -eq 0 ] && choice=$( printf "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
 
@@ -17,7 +17,9 @@ cleanup(){
 	rm -f /tmp/bt_devices
 	rm -f /tmp/bt_IDS
 	rm -f /tmp/paired_devices
+	rm -f /tmp/new_devices
 	rm -f /tmp/disp_devices
+	bluetoothctl scan off
 	exit
 }
 
@@ -35,9 +37,8 @@ case $choice in
 		notify-send "Bluetooth" "Searching for devices, please wait a bit"
 		sleep $SCAN_PERIOD
 		bluetoothctl devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/bt_devices
-		bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/paired_devices
 		grep -vf /tmp/paired_devices /tmp/bt_devices > /tmp/new_devices
-		choice=$( cat /tmp/new_devices | dmenu -l 10 -p 'pair with which device?:' )
+		choice=$( cat /tmp/new_devices | dmenu -l 10 -i -p 'pair with which device?' )
 		if [ -n "$choice" ]; then
 			bluetoothctl devices | awk '{print $2}' > /tmp/bt_IDS
 			dev_no=$(cat -n /tmp/bt_devices | grep "$choice" | awk '{print $1}')
@@ -45,14 +46,12 @@ case $choice in
 
 			bluetoothctl pair $dev_id && sleep 2
 			bluetoothctl connect $dev_id
-			bluetoothctl scan off
 		fi
 		cleanup;;
 
 esac
 
 if [ -n "$choice" ]; then
-#	choice=$( echo $choice | sed 's/ $//')
 	dev_no=$(cat -n /tmp/bt_devices | grep "$choice" | awk '{print $1}')
 	dev_id=$(cat -n /tmp/bt_IDS | grep $dev_no | awk '{print $2}')
 	bluetoothctl power on
