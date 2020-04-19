@@ -10,7 +10,7 @@ grep -vf "$BLACKLIST" /tmp/paired_devices > /tmp/disp_devices
 
 #Don't print empty device list, removes unnecessary empty choice in dmenu
 len=$(cat /tmp/disp_devices | wc -l)
-[ $len -gt 0 ] && choice=$( printf "$(cat /tmp/disp_devices)\n$actions" | dmenu -i -p 'What BT action would you like to perform:' )
+[ $len -gt 0 ] && choice=$( printf "$(< /tmp/disp_devices)\n$actions" | dmenu -i -p 'What BT action would you like to perform:' )
 [ $len -eq 0 ] && choice=$( printf "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
 
 cleanup(){
@@ -20,6 +20,7 @@ cleanup(){
 	rm -f /tmp/new_devices
 	rm -f /tmp/disp_devices
 	bluetoothctl scan off
+	bluetoothctl exit
 	exit
 }
 
@@ -52,7 +53,7 @@ case $choice in
 esac
 
 if [ -n "$choice" ]; then
-	dev_no=$(cat -n /tmp/bt_devices | grep "$choice" | awk '{print $1}')
+	dev_no=$(cat -n /tmp/paired_devices | grep "$choice" | awk '{print $1}')
 	dev_id=$(cat -n /tmp/bt_IDS | grep $dev_no | awk '{print $2}')
 	bluetoothctl power on
 	bluetoothctl connect $dev_id
