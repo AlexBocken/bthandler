@@ -4,6 +4,15 @@ SCAN_PERIOD=5
 BLACKLIST=$HOME/.local/bin/tools/bt_blacklist
 actions="turn off\nturn on\npair"
 
+#Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
+for prog in dmenu bluetoothctl awk cat; do
+   if ! hash "$prog" 2>/dev/null; then
+      printf 'bthandler: %s: command not found\n' "$prog" >&2
+      exit 127
+   fi
+done
+
+
 bluetoothctl paired-devices | awk '{print $2}' > /tmp/bt_IDS
 bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/paired_devices
 grep -vf "$BLACKLIST" /tmp/paired_devices > /tmp/disp_devices
@@ -19,7 +28,7 @@ cleanup(){
 	rm -f /tmp/paired_devices
 	rm -f /tmp/new_devices
 	rm -f /tmp/disp_devices
-	bluetoothctl scan off 2> /dev/null
+	bluetoothctl scan off > /dev/null
 	exit
 }
 
