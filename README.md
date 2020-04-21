@@ -1,7 +1,7 @@
 # bthandler
 A simple interactive tool to connect to already paired devices, pair new ones, toggle basic settings for bluetooth devices via dmenu
 
-If you ahve issues with your already paired devices not staying paired after reboots
+If you have issues with your already paired devices not staying paired after reboots
 ```bash
 chmod -R a+rwx /var/lib/bluetooth
 ```
