@@ -19,8 +19,7 @@ cleanup(){
 	rm -f /tmp/paired_devices
 	rm -f /tmp/new_devices
 	rm -f /tmp/disp_devices
-	bluetoothctl scan off
-	bluetoothctl exit
+	bluetoothctl scan off 2> /dev/null
 	exit
 }
 
