@@ -2,7 +2,7 @@
 #wait time to discover new devices in seconds
 SCAN_PERIOD=5
 BLACKLIST=$HOME/.local/bin/tools/bt_blacklist
-actions="turn off\nturn on\npair"
+actions="turn off\nturn on\npair\nunpair"
 
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
 for prog in dmenu bluetoothctl awk cat; do
@@ -57,7 +57,13 @@ case $choice in
 			bluetoothctl connect $dev_id
 		fi
 		cleanup;;
-
+	"unpair") choice=$( cat /tmp/paired_devices | dmenu -l 10 -i -p 'remove which paired device?')
+		if [ -n "choice" ]; then
+			dev_no=$(cat -n /tmp/paired_devices | grep "$choice" | awk '{print $1}')
+			dev_id=$(cat -n /tmp/bt_IDS | grep -E $dev_no"[[:space:]]" | awk '{print $2}' )
+			bluetoothctl remove $dev_id
+		fi
+		cleanup;;
 esac
 
 if [ -n "$choice" ]; then
