@@ -4,19 +4,28 @@
 VERSION = 1.1
 
 # paths
-PREFIX = ~/.local/bin/tools
+PREFIX = ~/.local/bin
+DATA_DIR = ~/.local/share/bt#if changed, needs adjustment in bt as well (defined in the beginning)
+SRC = bt
 
-SRC = bthandler
-OBJ = $(SRC:.c=.o)
 
 install:
 	mkdir -p $(DESTDIR)$(PREFIX)
-	cp -f bthandler $(DESTDIR)$(PREFIX)
-	chmod 755 $(DESTDIR)$(PREFIX)/bthandler
-	touch $(DESTDIR)$(PREFIX)/bt_blacklist
+	mkdir -p $(DATA_DIR)
+	cp -f bt $(DESTDIR)$(PREFIX)
+	chmod 755 $(DESTDIR)$(PREFIX)/bt
+	touch $(DATA_DIR)/blacklist
+	touch $(DATA_DIR)/paired
 
 uninstall:
-	rm -f $(DESTDIR)$(PREFIX)/bthandler
-	rm -f $(DESTDIR)$(PREFIX)/bt_blacklist
+	rm -f $(DESTDIR)$(PREFIX)/bt
+	rm -rf $(DATA_DIR)
 
-.PHONY: install uninstall
+#clears manual paired devices list and blacklist
+clear:
+	rm -rf $(DATA_DIR)
+	mkdir -p $(DATA_DIR)
+	touch $(DATA_DIR)/paired
+	touch $(DATA_DIR)/blacklist
+
+.PHONY: install uninstall clear
