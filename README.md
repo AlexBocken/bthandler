@@ -8,6 +8,8 @@ A simple interactive tool to:
 
 all via dmenu. Should be easily extendable by editing the `actions` string.
 
+<img src="/../assets/cropped.png" alt="cropped preview" width="800">
+
 # Installation
 Edit the Makefile to reflect your preffered installation destination. Then, simply
 
@@ -17,7 +19,7 @@ make install
 
 # Clear blacklist/pairlist
 
-Since `bluetoothctl paired-devices` seems to be hugely unreliable in listing paired devices, bthandler has a seperate list for all paired devices through bthandler.
+Since `bluetoothctl paired-devices` seems to be hugely unreliable in listing paired devices, bthandler has a seperate list for all devices paired through bthandler.
 There is also a blacklist available to not display certain devices, which might be useful for autoconnection Bluetooth mice for example.
 
 To clear these files, simply run
@@ -35,7 +37,7 @@ make uninstall
 
 # Pending features
 
-Here's a growing list of features that are not yet actively worked on but might be nice in the future. Currently I'm more concerned with reliability that fulfilling feature requests, but I'm still open to put some on this list.
+Here's a growing list of features that are not yet actively worked on but might be nice in the future. Currently I'm more concerned with reliability than fulfilling feature requests, but I'm still open to put some on this list.
 
 - start scanning for new devices immediately at execution to save time when pairing new devices
 - auto-trust newly paired devices/trust device via dmenu
