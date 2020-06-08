@@ -1,9 +1,10 @@
 #!/bin/bash
 #wait time to discover new devices in seconds
 SCAN_PERIOD=5
+#locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
-actions="turn off\nturn on\npair\nunpair"
+actions='turn off\nturn on\npair\nunpair'
 
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
 for prog in dmenu bluetoothctl awk cat; do
@@ -14,40 +15,19 @@ for prog in dmenu bluetoothctl awk cat; do
 done
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
-bluetoothctl paired-devices | awk '{print $2}' > /tmp/bt_IDS
-cat "$PAIRLIST" | awk '{print $2}' >> /tmp/bt_IDS
-echo bt_IDS:
-cat /tmp/bt_IDS
-bt_IDS="$( cat /tmp/bt_IDS | sort -u )"
-[ -n "$bt_IDS" ] && echo "$bt_IDS" > /tmp/bt_IDS
-echo bt_IDS sorted:
-cat /tmp/bt_IDS
+bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{print $2}' )"
 
 #Compile list of all device Names of paired devices (from bluetoothctl and from hardcoded list)
-bluetoothctl paired-devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/paired_devices
-echo paired_devices:
-cat /tmp/paired_devices
-cat "$PAIRLIST" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' >> /tmp/paired_devices
-paired_devices="$( cat /tmp/paired_devices | sort -u )"
-[ -n "$paired_devices" ] && echo "$paired_devices" > /tmp/paired_devices
-echo paired_devices sorted:
-cat /tmp/paired_devices
+paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 
-
-grep -vf "$BLACKLIST" /tmp/paired_devices > /tmp/disp_devices
+disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
+#echo disp_devices:"$disp_devices"test
 
 #Don't print empty device list, removes unnecessary empty choice in dmenu
-len=$(cat /tmp/disp_devices | wc -l)
-echo len: $len
-[ $len -eq 0 ] && choice=$( printf "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
-[ $len -gt 0 ] && choice=$( printf "$(< /tmp/disp_devices)\n$actions" | dmenu -i -p 'What BT action would you like to perform:' )
+[ "$disp_devices" = "" ] && choice=$( printf $actions | dmenu -i -p 'What BT action would you like to perform:' )
+[ "$disp_devices" != "" ] && choice=$( printf "%s\n$actions" "$disp_devices" | dmenu -i -p 'What BT action would you like to perform:' )
 
 cleanup(){
-	rm -f /tmp/bt_devices
-	rm -f /tmp/bt_IDS
-	rm -f /tmp/paired_devices
-	rm -f /tmp/new_devices
-	rm -f /tmp/disp_devices
 	bluetoothctl scan off > /dev/null
 	exit 0
 }
@@ -58,34 +38,36 @@ case $choice in
 	"turn off") bluetoothctl power off
 		cleanup;;
 	"scan on") bluetoothctl power on && echo power on && sleep 2
-		[ -n $TERMINAL ] && ($TERMINAL -e bluetoothctl scan on ) || st bluetoothctl scan on
+		([ -n "$TERMINAL" ] && $TERMINAL -e bluetoothctl scan on ) || st bluetoothctl scan on
 		cleanup;;
 	"pair") bluetoothctl power on
 		bluetoothctl scan on & disown
 		notify-send "Bluetooth" "Searching for devices, please wait a bit"
 		sleep $SCAN_PERIOD
-		bluetoothctl devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' > /tmp/bt_devices
-		grep -vf /tmp/paired_devices /tmp/bt_devices > /tmp/new_devices
-		choice=$( cat /tmp/new_devices | dmenu -l 10 -i -p 'pair with which device?' )
+		echo "$paired_devices" > /tmp/paired_devices
+		new_devices="$( bluetoothctl devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' | grep -vf /tmp/paired_devices )"
+		rm -f /tmp/paired_devices
+		choice=$( echo "$new_devices" | dmenu -l 10 -i -p 'pair with which device?' )
 		if [ -n "$choice" ]; then
-			bluetoothctl devices | awk '{print $2}' > /tmp/bt_IDS
-			dev_no=$(cat -n /tmp/bt_devices | grep "$choice" | awk '{print $1}')
-			dev_id=$(cat -n /tmp/bt_IDS | grep -E $dev_no"[[:space:]]" | awk '{print $2}' )
+			bt_IDS="$( bluetoothctl devices | awk '{print $2}' )"
+			dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
+			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
 
-			bluetoothctl pair $dev_id && sleep 2
-			bluetoothctl connect $dev_id
+			bluetoothctl pair "$dev_id" && sleep 2
+			bluetoothctl connect "$dev_id"
 			#if device is not already hard coded as paired, add to paired devices list
-			echo grep: $( grep $dev_id "$PAIRLIST" )
-			if [ -z $( grep $dev_id "$PAIRLIST" ) ]; then
-				echo "Device $dev_id $choice" >> "$PAIRLIST"
+			#echo grep: "$( grep "$dev_id" "$PAIRLIST" )"
+			if grep -q "$dev_id" "$PAIRLIST"
+			then
+				echo Device "$dev_id" "$choice" >> "$PAIRLIST"
 			fi
 		fi
 		cleanup;;
-	"unpair") choice=$( cat /tmp/paired_devices | dmenu -l 10 -i -p 'remove which paired device?')
-		if [ -n "choice" ]; then
-			dev_no=$(cat -n /tmp/paired_devices | grep "$choice" | awk '{print $1}')
-			dev_id=$(cat -n /tmp/bt_IDS | grep -E $dev_no"[[:space:]]" | awk '{print $2}' )
-			bluetoothctl remove $dev_id
+	"unpair") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+		if [ -n "$choice" ]; then
+			dev_no=$(cat -n /tmp/paired_devices | grep -E "^[0-9]*\tDevice [0-9:].* $choice$" | awk '{print $1}')
+			dev_id=$( echo "$bt_IDS" | nl | grep -E "$dev_no""[[:space:]]" | awk '{print $2}' )
+			bluetoothctl remove "$dev_id"
 			#remove device to unpair from hard coded paired devices list
 			new_paired_list="$( grep -v "$dev_id" "$PAIRLIST" )"
 			echo "$new_paired_list" > "$PAIRLIST"
@@ -94,10 +76,15 @@ case $choice in
 esac
 
 if [ -n "$choice" ]; then
-	dev_no=$(cat -n /tmp/paired_devices | grep "$choice" | awk '{print $1}')
-	dev_id=$(cat -n /tmp/bt_IDS | grep $dev_no | awk '{print $2}')
+	#echo paired_devices: "$( echo "$paired_devices" | nl )"
+	dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9:]+\t$choice$" | awk '{print $1}')
+	dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
+	#echo dev_no:"$dev_no"
+	#echo dev_id:"$dev_id"
+	#echo choice:"$choice"
 	bluetoothctl power on
-	bluetoothctl connect $dev_id
+	bluetoothctl pair "$dev_id"
+	bluetoothctl connect "$dev_id"
 fi
 
 cleanup
