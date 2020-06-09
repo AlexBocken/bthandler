@@ -10,7 +10,7 @@ pair
 unpair"
 
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
-for prog in dmenu bluetoothctl awk cat; do
+for prog in dmenu bluetoothctl awk cat date nl; do
    if ! hash "$prog" 2>/dev/null; then
       printf 'bthandler: %s: command not found\n' "$prog" >&2
       exit 127
@@ -40,12 +40,17 @@ cleanup(){
 
 pair(){
 	#since this function can get called indefinitely, make sure to always be scanning and controller has power in the case that it got deactived by some other process.
-	bluetoothctl power on
+	bluetoothctl power on &>/dev/null &
 	bluetoothctl scan on &>/dev/null &
 #check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
 	if [ $((( "$(date +'%s')" - "$start_scan" ))) -lt $SCAN_PERIOD ]; then
 		sleep_period="$((( "$SCAN_PERIOD" - "$( date +'%s')" + "$start_scan" )))"
-		notify-send "Bluetooth" "Searching for devices, please wait $sleep_period seconds"
+		if [ "$sleep_period" -eq 1 ]; then
+			notify-send "Bluetooth" "Searching for devices, please wait 1 second"
+		else
+			notify-send "Bluetooth" "Searching for devices, please wait $sleep_period seconds"
+		fi
+
 		sleep "$sleep_period"
 	fi
 	echo "$paired_devices" > /tmp/paired_devices
@@ -64,7 +69,6 @@ pair(){
 		bluetoothctl pair "$dev_id" && sleep 2
 		bluetoothctl connect "$dev_id"
 		#if device is not already hard coded as paired, add to paired devices list
-		#echo grep: "$( grep "$dev_id" "$PAIRLIST" )"
 		if grep -q "$dev_id" "$PAIRLIST"
 		then
 			echo Device "$dev_id" "$choice" >> "$PAIRLIST"
@@ -95,12 +99,8 @@ case $choice in
 esac
 
 if [ -n "$choice" ]; then
-	#echo paired_devices: "$( echo "$paired_devices" | nl )"
 	dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 	dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
-	#echo dev_no:"$dev_no"
-	#echo dev_id:"$dev_id"
-	#echo choice:"$choice"
 	bluetoothctl power on
 	bluetoothctl pair "$dev_id"
 	bluetoothctl connect "$dev_id"
