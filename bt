@@ -31,7 +31,7 @@ disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
 
 #Don't print empty device list, removes unnecessary empty choice in dmenu
 [ "$disp_devices" = "" ] && choice=$( echo "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
-[ "$disp_devices" != "" ] && choice=$( echo "$disp_devices" "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
+[ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices" && echo "$actions" ) | dmenu -i -p 'What BT action would you like to perform:' )
 
 cleanup(){
 	bluetoothctl scan off
