@@ -44,5 +44,5 @@ make uninstall
 Here's a growing list of features that are not yet actively worked on but might be nice in the future. Currently I'm more concerned with reliability than fulfilling feature requests, but I'm still open to put some on this list.
 
 - start scanning for new devices immediately at execution to save time when pairing new devices -> Implemented (I think, seems to be working at least)
-- auto-trust newly paired devices/trust device via dmenu
+- auto-trust newly paired devices/trust device via dmenu -> Implemented changeable via the AUTOTRUST variable in the beginning of bt, menu display adjusts accordingly
 - blacklist devices via dmenu

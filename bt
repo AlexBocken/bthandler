@@ -4,10 +4,17 @@ SCAN_PERIOD=5
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
+AUTOTRUST=true
 actions="turn off
 turn on
 pair
 unpair"
+
+if ! $AUTOTRUST; then
+	actions+="
+trust"
+fi
+
 
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
 for prog in dmenu bluetoothctl awk cat date nl; do
@@ -68,6 +75,9 @@ pair(){
 
 		bluetoothctl pair "$dev_id" && sleep 2
 		bluetoothctl connect "$dev_id"
+		if $AUTOTRUST; then
+			bluetoothctl trust "$dev_id"
+		fi
 		#if device is not already hard coded as paired, add to paired devices list
 		if grep -q "$dev_id" "$PAIRLIST"
 		then
@@ -96,6 +106,12 @@ case $choice in
 			echo "$new_paired_list" > "$PAIRLIST"
 		fi
 		cleanup;;
+	"trust") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+		if [ -n "$choice" ]; then
+			dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
+			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
+			bluetoothctl trust "$dev_id"
+		fi
 esac
 
 if [ -n "$choice" ]; then
