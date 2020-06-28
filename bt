@@ -9,10 +9,6 @@ actions="pair
 disconnect
 unpair"
 
-#get power state of bluetooth controller
-powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
-scanstatus="$( bluetoothctl show | grep Discovering | awk '{print $2}' )"
-
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
 for prog in dmenu bluetoothctl awk cat date nl; do
    if ! hash "$prog" 2>/dev/null; then
@@ -21,20 +17,30 @@ for prog in dmenu bluetoothctl awk cat date nl; do
    fi
 done
 
-poweron(){
-	[ "$powerstatus" = "no" ] && bluetoothctl power on
+power(){
+	powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
+	[ "$powerstatus" = "no" ] && [ "$1" = on ] && bluetoothctl power on
+	[ "$powerstatus" = "yes" ] && [ "$1" = off ] && bluetoothctl power off
 }
-scanon(){
-	if [ "$scanstatus" = "no" ]; then
-	bluetoothctl scan on &
-	start_scan="$( date +'%s' )"
-fi
+scan(){
+	scanstatus="$( bluetoothctl show | grep Discovering | awk '{print $2}' )"
+	if [ "$1" = on ]; then
+		if [ "$scanstatus" = "no" ]; then
+			bluetoothctl scan on &
+			start_scan="$( date +'%s' )"
+		fi
+	elif [ "$1" = off ]; then
+		if [ "$scanstatus" = "yes" ]; then
+			bluetoothctl scan off
+			start_scan="$( date +'%s' )"
+		fi
+	fi
 }
 
 #start scanning as early as possible to speed up pairing process
 #=> maybe use an option to do this? Otherwise ever invocation of bt powers on the controller.
-poweron
-scanon
+power on
+scan on
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
 bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{print $2}' )"
@@ -43,25 +49,23 @@ bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{
 paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 
 disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
-echo "$paired_devices"
-echo ----------------
-echo "$disp_devices"
 
+#detects current power mode of controller and adjusts options accordingly
 poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 #Don't print empty device list, removes unnecessary empty choice in dmenu
 [ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$poweroption" "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
 [ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices" && printf "%s\n%s" "$poweroption" "$actions"  ) | dmenu -i -p 'What BT action would you like to perform:' )
 
 cleanup(){
-	bluetoothctl scan off
+	scan off
 	exit 0
 }
 
 pair(){
 	#since this function can get called indefinitely, make sure to always be scanning and controller has power in the case that it got deactived by some other process.
-	#bluetoothctl power on &>/dev/null &
-	#bluetoothctl scan on &>/dev/null &
-#check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
+	power on
+	scan on
+	#check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
 	if [ $((( "$(date +'%s')" - "$start_scan" ))) -lt $SCAN_PERIOD ]; then
 		sleep_period="$((( "$SCAN_PERIOD" - "$( date +'%s')" + "$start_scan" )))"
 		if [ "$sleep_period" -eq 1 ]; then
@@ -132,12 +136,12 @@ case $choice in
 				dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
 				bluetoothctl disconnect "$dev_id"
 			fi;;
-	"*")
+	*)
+		echo "$choice"
 		dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 		dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
 		bluetoothctl power on
 		bluetoothctl pair "$dev_id"
 		bluetoothctl connect "$dev_id";;
 esac
-
 cleanup
