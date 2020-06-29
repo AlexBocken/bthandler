@@ -28,7 +28,9 @@ power(){
 }
 scan(){
 	scanstatus="$( bluetoothctl show | grep Discovering | awk '{print $2}' )"
-	if [ "$1" = on ]; then
+	if [ "$1" = "on" ]; then
+		#sets variable in case scanning was already on before the start of bt
+		[ "$start_scan" = "" ] && start_scan="$( date +'%s' )"
 		if [ "$scanstatus" = "no" ]; then
 			bluetoothctl scan on &
 			start_scan="$( date +'%s' )"
@@ -36,7 +38,6 @@ scan(){
 	elif [ "$1" = off ]; then
 		if [ "$scanstatus" = "yes" ]; then
 			bluetoothctl scan off
-			start_scan="$( date +'%s' )"
 		fi
 	fi
 }
