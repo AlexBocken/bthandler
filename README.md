@@ -8,7 +8,7 @@ A simple interactive tool to:
 
 all via dmenu. Should be easily extendable by editing the `actions` string.
 
-<img src="/../assets/cropped.png" alt="cropped preview" width="800">
+<img src="/../assets/cropped.png" alt="cropped preview" width="1800">
 
 # Installation
 Edit the Makefile to reflect your preffered installation destination. Then, simply
@@ -46,3 +46,4 @@ Here's a growing list of features that are not yet actively worked on but might 
 - start scanning for new devices immediately at execution to save time when pairing new devices -> Implemented (I think, seems to be working at least)
 - auto-trust newly paired devices/trust device via dmenu -> Implemented changeable via the AUTOTRUST variable in the beginning of bt, menu display adjusts accordingly
 - blacklist devices via dmenu
+- update bthandler internal paired devices list if something new shows up via `bluetoothctl paired-devices` not already listed in the paired devices file
