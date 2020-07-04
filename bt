@@ -1,7 +1,7 @@
 #!/bin/sh
-
 SCAN_PERIOD=5
 AUTOTRUST=false
+AUTOSCAN=true #immediately start scanning when started to speed up pairing process
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
@@ -54,8 +54,11 @@ update_pair_list(){
 
 #start scanning as early as possible to speed up pairing process
 #=> maybe use an option to do this? Otherwise ever invocation of bt powers on the controller.
-power on
-scan on
+if $AUTOSCAN
+then
+	power on
+	scan on
+fi
 update_pair_list &
 
 # shellcheck disable=SC1091
