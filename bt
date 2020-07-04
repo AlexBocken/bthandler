@@ -1,5 +1,5 @@
-#!/bin/bash
-#wait time to discover new devices in seconds
+#!/bin/sh
+
 SCAN_PERIOD=5
 AUTOTRUST=false
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
@@ -10,7 +10,7 @@ actions="pair
 disconnect
 unpair"
 
-[ "$AUTOTRUST" = false ] && actions+="
+[ "$AUTOTRUST" = false ] && actions="${actions}
 trust"
 
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
@@ -28,7 +28,7 @@ power(){
 }
 scan(){
 	scanstatus="$( bluetoothctl show | grep Discovering | awk '{print $2}' )"
-	if [ "$1" = "on" ]; then
+	if [ "$1" = on ]; then
 		#sets variable in case scanning was already on before the start of bt
 		[ "$start_scan" = "" ] && start_scan="$( date +'%s' )"
 		if [ "$scanstatus" = "no" ]; then
@@ -81,35 +81,44 @@ pair(){
 
 		sleep "$sleep_period"
 	fi
-	if [ $paired_devices = "" ]; then
-		echo "$paired_devices" > /tmp/paired_devices
-		new_devices="$( bluetoothctl devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' | grep -vf /tmp/paired_devices )"
-		rm -f /tmp/paired_devices
+	all_devices="$( bluetoothctl devices )"
+	if [ "$paired_devices" = "" ]; then
+		new_devices="$( echo "$all_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
+		bt_IDS="$( echo "$all_devices" | awk '{print $2}' )"
 	else
-		new_devices="$( bluetoothctl devices | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
+		echo "$paired_devices" > /tmp/paired_devices$$
+		filtered_devices="$( echo "$all_devices" | grep -vf "/tmp/paired_devices$$")"
+		bt_IDS="$( echo "$filtered_devices" | awk '{print $2}' )"
+		new_devices="$( echo "$filtered_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
+		rm /tmp/paired_devices$$
 	fi
-	[ $new_devices = "" ] && options="rescan" || options=$(echo "$new_devices" && echo 'rescan')
+	[ "$new_devices" = "" ] && options="rescan" || options=$(echo "$new_devices" && echo 'rescan')
 	choice=$( echo "$options" | dmenu -l 10 -i -p 'pair with which device?' )
 	if [ -n "$choice" ]; then
 		if [ "$choice" = "rescan" ]; then
 			start_scan="$( date +'%s')"
 			pair
-		fi
-		bt_IDS="$( bluetoothctl devices | awk '{print $2}' )"
-		dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
-		dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
-
-		bluetoothctl pair "$dev_id" && sleep 2
-		bluetoothctl connect "$dev_id"
-		if $AUTOTRUST; then
-			bluetoothctl trust "$dev_id"
-		fi
-		#if device is not already hard coded as paired, add to paired devices list
-		if [ "$( grep "$dev_id" "$PAIRLIST")" != "" ]
-		then
-			echo to be added to $PAIRLIST
-			echo Device "$dev_id" "$choice"
-			echo Device "$dev_id" "$choice" >> "$PAIRLIST"
+		else
+			echo all:"$all_devices"
+			echo choice:"$choice"
+			echo new:"$new_devices"
+			dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
+			echo dev_no:$dev_no
+			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
+			echo bt_IDS:"$bt_IDS"
+			echo devid:$dev_id
+			#only attempt to connect if pairing succeeds
+			bluetoothctl pair "$dev_id" && ( pair_succesful=true && bluetoothctl connect "$dev_id" ) || pair_succesful=false
+			if $AUTOTRUST; then
+				bluetoothctl trust "$dev_id"
+			fi
+			#if device is not already hard coded as paired, add to paired devices list
+			if [ "$( grep "$dev_id" "$PAIRLIST")" = "" ] || [ "$(wc -l "$PAIRLIST")" -eq 0 ] && $pair_succesful
+			then
+				echo to be added to "$PAIRLIST":
+				echo Device "$dev_id" "$choice"
+				echo Device "$dev_id" "$choice" >> "$PAIRLIST"
+			fi
 		fi
 	fi
 }
@@ -127,7 +136,13 @@ case $choice in
 			bluetoothctl remove "$dev_id"
 			#remove device to unpair from hard coded paired devices list
 			new_paired_list="$( grep -v "$dev_id" "$PAIRLIST" )"
-			echo "$new_paired_list" > "$PAIRLIST"
+			if [ "$new_paired_list" != "" ]
+			then
+				echo "$new_paired_list" > "$PAIRLIST"
+			else
+				rm -rf "$PAIRLIST"
+				touch "$PAIRLIST"
+			fi
 		fi;;
 	"trust") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
 		if [ -n "$choice" ]; then
@@ -144,9 +159,10 @@ case $choice in
 	*)
 		echo "$choice"
 		dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
-		dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
-		bluetoothctl power on
-		bluetoothctl pair "$dev_id"
-		bluetoothctl connect "$dev_id";;
+		[ "$dev_no" != "" ] && dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
+		if [ -n "$dev_id" ]; then
+			power on
+			bluetoothctl pair "$dev_id"
+			bluetoothctl connect "$dev_id"
+		fi;;
 esac
-cleanup
