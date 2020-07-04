@@ -139,8 +139,8 @@ pair(){
 }
 
 case $choice in
-	"turn on") bluetoothctl power on;;
-	"turn off") bluetoothctl power off;;
+	"power on") bluetoothctl power on;;
+	"power off") bluetoothctl power off;;
 	"scan on") bluetoothctl power on && echo power on && sleep 2
 		([ -n "$TERMINAL" ] && $TERMINAL -e bluetoothctl scan on ) || st bluetoothctl scan on;;
 	"pair") pair;;
