@@ -6,8 +6,8 @@ AUTOTRUST=false
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
 
-actions="pair
-disconnect
+actions="disconnect
+pair
 unpair"
 
 [ "$AUTOTRUST" = false ] && actions="${actions}
@@ -69,8 +69,8 @@ disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
 #detects current power mode of controller and adjusts options accordingly
 poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 #Don't print empty device list, removes unnecessary empty choice in dmenu
-[ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$poweroption" "$actions" | dmenu -i -p 'What BT action would you like to perform:' )
-[ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices" && printf "%s\n%s" "$poweroption" "$actions"  ) | dmenu -i -p 'What BT action would you like to perform:' )
+[ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$actions" "$poweroption" | dmenu -i -p 'What BT action would you like to perform:' )
+[ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices" && printf "%s\n%s" "$actions" "$poweroption" ) | dmenu -i -p 'What BT action would you like to perform:' )
 
 cleanup(){
 	scan off
