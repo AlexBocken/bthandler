@@ -6,8 +6,7 @@ AUTOTRUST=false
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
 
-actions="disconnect
-pair
+actions="pair
 unpair"
 
 [ "$AUTOTRUST" = false ] && actions="${actions}
@@ -52,11 +51,19 @@ update_pair_list(){
 	fi
 }
 
+
 #start scanning as early as possible to speed up pairing process
 #=> maybe use an option to do this? Otherwise ever invocation of bt powers on the controller.
 power on
 scan on
 update_pair_list &
+
+# shellcheck disable=SC1091
+if bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -q "Connected: yes"
+then
+	actions="$(printf "disconnect\n%s" "$actions")"
+fi
+
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
 bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{print $2}' )"
