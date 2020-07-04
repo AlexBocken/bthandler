@@ -43,7 +43,7 @@ make uninstall
 **Watch out:** since I'm using relative paths in the Makefile, it does make a difference whether you run the script with sudo or without. (both will work, you just have to be consistent in the installing und unisntalling process)
 If you have troubles with an uninstall, _additionally_ run `which bt | xargs rm`.
 
-# Pending features
+# TODO
 
 Here's a growing list of features that are not yet actively worked on but might be nice in the future. Currently I'm more concerned with reliability than fulfilling feature requests, but I'm still open to put some on this list.
 
@@ -52,3 +52,4 @@ Here's a growing list of features that are not yet actively worked on but might 
 - blacklist devices via dmenu	-> **Implemented** (action is hidden, but typing `blacklist` as your choice will reveal the menu)
 - update bthandler internal paired devices list if something new shows up via `bluetoothctl paired-devices` not already listed in the paired devices file -> **Implemented**
 - only show disconnect option if devices are already connected -> **Implemented**
+- find a way to get something similar to `grep -vf` without the need of temp files.
