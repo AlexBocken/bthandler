@@ -1,10 +1,12 @@
 # bthandler
 A simple interactive tool to:
 - connect to already paired devices
+- disconnect bluetooth devices
 - pair new ones
 - unpair already paired devices
 - turn bluetooth on/off
 - blacklist paired devices to not be listed in connection selection
+- trust devices
 
 all via dmenu. Should be easily extendable by editing the `actions` string.
 
@@ -38,6 +40,8 @@ To uninstall you might follow that it's a simple
 ```bash
 make uninstall
 ```
+**Watch out:** since I'm using relative paths in the Makefile, it does make a difference whether you run the script with sudo or without. (both will work, you just have to be consistent in the installing und unisntalling process)
+If you have troubles with an uninstall, _additionally_ run `which bt | xargs rm`.
 
 # Pending features
 
@@ -47,4 +51,4 @@ Here's a growing list of features that are not yet actively worked on but might 
 - auto-trust newly paired devices/trust device via dmenu -> **Implemented changeable via the AUTOTRUST variable in the beginning of bt, menu display adjusts accordingly**
 - blacklist devices via dmenu	-> **Implemented** (action is hidden, but typing `blacklist` as your choice will reveal the menu)
 - update bthandler internal paired devices list if something new shows up via `bluetoothctl paired-devices` not already listed in the paired devices file -> **Implemented**
-- only show disconnect option if devices are already connected
+- only show disconnect option if devices are already connected -> **Implemented**
