@@ -161,6 +161,11 @@ case $choice in
 				dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
 				bluetoothctl disconnect "$dev_id"
 			fi;;
+	"blacklist")
+		choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'blacklist which paired device from selection?')
+		if [ -n "$choice" ]; then
+			echo "$choice" >> "$BLACKLIST"
+		fi;;
 	*)
 		echo "$choice"
 		dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
