@@ -99,14 +99,8 @@ pair(){
 			start_scan="$( date +'%s')"
 			pair
 		else
-			echo all:"$all_devices"
-			echo choice:"$choice"
-			echo new:"$new_devices"
 			dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
-			echo dev_no:$dev_no
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
-			echo bt_IDS:"$bt_IDS"
-			echo devid:$dev_id
 			#only attempt to connect if pairing succeeds
 			bluetoothctl pair "$dev_id" && ( pair_succesful=true && bluetoothctl connect "$dev_id" ) || pair_succesful=false
 			if $AUTOTRUST; then
