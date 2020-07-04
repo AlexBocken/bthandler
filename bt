@@ -42,10 +42,21 @@ scan(){
 	fi
 }
 
+#Check bluetoothctl paired-devices for new devices to be hardcoded into pair list
+update_pair_list(){
+	btctl_paired_devices="$(bluetoothctl paired-devices)"
+	if [ -n "$btctl_paired_devices" ]
+	then
+		btctl_not_in_list="$( echo "$btctl_paired_devices" | grep -vf "$PAIRLIST")"
+		[ -n "$btctl_not_in_list" ] && echo "$btctl_not_in_list" >> "$PAIRLIST"
+	fi
+}
+
 #start scanning as early as possible to speed up pairing process
 #=> maybe use an option to do this? Otherwise ever invocation of bt powers on the controller.
 power on
 scan on
+update_pair_list &
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
 bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{print $2}' )"
