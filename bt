@@ -1,6 +1,6 @@
 #!/bin/sh
 SCAN_PERIOD=5
-AUTOTRUST=false
+AUTOTRUST=false #trust every newly paired device
 AUTOSCAN=true #immediately start scanning when started to speed up pairing process
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
@@ -25,10 +25,11 @@ power(){
 	[ "$powerstatus" = "no" ] && [ "$1" = on ] && bluetoothctl power on
 	[ "$powerstatus" = "yes" ] && [ "$1" = off ] && bluetoothctl power off
 }
+
 scan(){
 	scanstatus="$( bluetoothctl show | grep Discovering | awk '{print $2}' )"
 	if [ "$1" = on ]; then
-		#sets variable in case scanning was already on before the start of bt
+		#sets variable in case scanning was no already on before the start of bt
 		[ "$start_scan" = "" ] && start_scan="$( date +'%s' )"
 		if [ "$scanstatus" = "no" ]; then
 			bluetoothctl scan on &
@@ -61,7 +62,9 @@ startup(){
 		scan on
 	fi
 }
-startup &
+
+#Sadly needs to be run without '&' for now, since it otherwise breaks start_scan variable
+startup
 update_pair_list &
 
 # shellcheck disable=SC1091
@@ -111,11 +114,11 @@ pair(){
 		new_devices="$( echo "$all_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 		bt_IDS="$( echo "$all_devices" | awk '{print $2}' )"
 	else
-		echo "$paired_devices" > /tmp/paired_devices$$
-		filtered_devices="$( echo "$all_devices" | grep -vf "/tmp/paired_devices$$")"
+		#echo "$paired_devices" > /tmp/paired_devices$$
+		filtered_devices="$( echo "$all_devices" | grep -v "$paired_devices")"
 		bt_IDS="$( echo "$filtered_devices" | awk '{print $2}' )"
 		new_devices="$( echo "$filtered_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
-		rm /tmp/paired_devices$$
+		#rm /tmp/paired_devices$$
 	fi
 	[ "$new_devices" = "" ] && options="rescan" || options=$(echo "$new_devices" && echo 'rescan')
 	choice=$( echo "$options" | dmenu -l 10 -i -p 'pair with which device?' )
