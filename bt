@@ -80,6 +80,7 @@ paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u 
 disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
 
 #detects current power mode of controller and adjusts options accordingly
+powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
 poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 #Don't print empty device list, removes unnecessary empty choice in dmenu
 [ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$actions" "$poweroption" | dmenu -i -p 'What BT action would you like to perform:' )
