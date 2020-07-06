@@ -53,4 +53,4 @@ If you have troubles with an uninstall, _additionally_ run `which bt | xargs rm`
 - only show disconnect option if devices are already connected -> **Implemented**
 - find a way to get something similar to `grep -vf` without the need of temp files.
 - only list connected devices to disconnect from, not all paired devices -> **Implemented**
-- only list not trusted devices in trust menu
+- only list not trusted devices in trust menu -> **Implemented**

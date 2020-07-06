@@ -166,7 +166,17 @@ case $choice in
 				touch "$PAIRLIST"
 			fi
 		fi;;
-	"trust") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+
+	"trust")
+		#search through all devices which are connected and only list those as options
+		# shellcheck disable=SC1091
+		untrusted_devices="$( awk '{print "bluetoothctl info "$2}' "$PAIRLIST" | . /dev/stdin | grep -E '(Alias:|Trusted:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Trusted: no" | awk -F ';' '{print $1}' )"
+		if [ "$( echo "$untrusted_devices" | wc -l )" -gt 0 ]
+		then
+			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+		else
+			notify-send "Bluetooth" "No paired devices that are not trusted"
+		fi
 		if [ -n "$choice" ]; then
 			dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
