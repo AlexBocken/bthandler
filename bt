@@ -172,7 +172,12 @@ case $choice in
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
 			bluetoothctl trust "$dev_id"
 		fi;;
-	"disconnect") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+	"disconnect") if [ "$( echo "$paired_devices" | wc -l )" -gt 1 ]
+		      then
+			choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+	              else
+			      choice="$(paired_devices)"
+		      fi
 			if [ -n "$choice" ]; then
 				dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 				dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
