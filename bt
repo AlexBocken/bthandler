@@ -205,7 +205,6 @@ case $choice in
 			echo "$choice" >> "$BLACKLIST"
 		fi;;
 	*)
-		echo "$choice"
 		dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 		[ "$dev_no" != "" ] && dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
 		if [ -n "$dev_id" ]; then
