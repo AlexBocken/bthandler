@@ -172,17 +172,23 @@ case $choice in
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
 			bluetoothctl trust "$dev_id"
 		fi;;
-	"disconnect") if [ "$( echo "$paired_devices" | wc -l )" -gt 1 ]
-		      then
-			choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
-	              else
-			      choice="$(paired_devices)"
-		      fi
-			if [ -n "$choice" ]; then
-				dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
-				dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
-				bluetoothctl disconnect "$dev_id"
-			fi;;
+	"disconnect")
+		#search through all devices which are connected and only list those as options
+		# shellcheck disable=SC1091
+		connected_devices="$( bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(Alias:|Connected:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Connected: yes" | awk -F ';' '{print $1}' )"
+		#only open dmenu prompt if there is more than one connected device
+		if [ "$( echo "$connected_devices" | wc -l )" -gt 1 ]
+		then
+			choice=$( echo "$connected_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+	        else
+			choice="$connected_devices"
+		fi
+		#only there was a choice (instead of canceling the dmenu)
+		if [ -n "$choice" ]; then
+			dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
+			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
+			bluetoothctl disconnect "$dev_id"
+		fi;;
 	"blacklist")
 		choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'blacklist which paired device from selection?')
 		if [ -n "$choice" ]; then
