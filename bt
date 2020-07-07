@@ -186,6 +186,7 @@ case $choice in
 		#search through all devices which are connected and only list those as options
 		# shellcheck disable=SC1091
 		connected_devices="$( bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(Alias:|Connected:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Connected: yes" | awk -F ';' '{print $1}' )"
+		echo "$connected_devices"
 		#only open dmenu prompt if there is more than one connected device
 		if [ "$( echo "$connected_devices" | wc -l )" -gt 1 ]
 		then
@@ -209,7 +210,7 @@ case $choice in
 		[ "$dev_no" != "" ] && dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
 		if [ -n "$dev_id" ]; then
 			power on
-			bluetoothctl pair "$dev_id"
+			bluetoothctl devices | grep -q "$dev_id" || bluetoothctl pair "$dev_id"
 			bluetoothctl connect "$dev_id"
 		fi;;
 esac
