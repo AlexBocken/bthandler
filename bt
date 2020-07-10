@@ -30,11 +30,12 @@ scan(){
 	scanstatus="$( bluetoothctl show | grep Discovering | awk '{print $2}' )"
 	if [ "$1" = on ]; then
 		#sets variable in case scanning was no already on before the start of bt
-		[ "$start_scan" = "" ] && start_scan="$( date +'%s' )"
+		[ -f /tmp/bt_start_scan$$ ] || start_scan="$( date +'%s' )"
 		if [ "$scanstatus" = "no" ]; then
 			bluetoothctl scan on &
 			start_scan="$( date +'%s' )"
 		fi
+		echo "$start_scan" > /tmp/bt_start_scan$$
 	elif [ "$1" = off ]; then
 		if [ "$scanstatus" = "yes" ]; then
 			bluetoothctl scan off
@@ -54,8 +55,15 @@ update_pair_list(){
 
 
 #start scanning as early as possible to speed up pairing process
-#In function to more quickly display the menu
 startup(){
+	#remove old tmp files
+	for f in /tmp/*
+	do
+	  case $f in
+	    /tmp/bt_start_scan*) rm "$f";;
+	    *) true;;
+	  esac
+	done
 	if $AUTOSCAN
 	then
 		power on
@@ -64,7 +72,7 @@ startup(){
 }
 
 #Sadly needs to be run without '&' for now, since it otherwise breaks start_scan variable
-startup
+startup &
 update_pair_list &
 
 # shellcheck disable=SC1091
@@ -91,6 +99,7 @@ poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 
 cleanup(){
 	scan off
+	rm /tmp/bt_start_scan$$
 	exit 0
 }
 
@@ -99,6 +108,7 @@ pair(){
 	power on
 	scan on
 	#check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
+	start_scan="$(cat /tmp/bt_start_scan$$)"
 	if [ $((( "$(date +'%s')" - "$start_scan" ))) -lt $SCAN_PERIOD ]; then
 		sleep_period="$((( "$SCAN_PERIOD" - "$( date +'%s')" + "$start_scan" )))"
 		if [ "$sleep_period" -eq 1 ]; then
@@ -125,6 +135,7 @@ pair(){
 	if [ -n "$choice" ]; then
 		if [ "$choice" = "rescan" ]; then
 			start_scan="$( date +'%s')"
+			echo "$start_scan" > /tmp/bt_start_scan$$
 			pair
 		else
 			dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
