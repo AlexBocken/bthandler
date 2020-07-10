@@ -225,3 +225,5 @@ case $choice in
 			bluetoothctl connect "$dev_id"
 		fi;;
 esac
+
+cleanup
