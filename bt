@@ -99,7 +99,7 @@ poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 
 cleanup(){
 	scan off
-	rm /tmp/bt_start_scan$$
+	rm /tmp/bt_start_scan$$ 2> /dev/null
 	exit 0
 }
 
