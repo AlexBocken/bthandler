@@ -44,6 +44,14 @@ make uninstall
 ```
 If you have troubles with an uninstall, _additionally_ run `which bt | xargs rm`.
 
+# Troubleshooting
+
+## If bt takes long to show a menu
+consider turning off `AUTOSCAN`. If there are many devices around you autoscanning will add them all to your `bluetoothctl devices` list. Every device on that list get's checked whether it's connected at startup.
+
+This should only be an issue if `bluetoothctl scan off` is unreliable for you though.
+
+
 # TODO
 
 - start scanning for new devices immediately at execution to save time when pairing new devices -> **Implemented**
