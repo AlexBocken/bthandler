@@ -62,3 +62,4 @@ This should only be an issue if `bluetoothctl scan off` is unreliable for you th
 - find a way to get something similar to `grep -vf` without the need of temp files.
 - only list connected devices to disconnect from, not all paired devices -> **Implemented**
 - only list not trusted devices in trust menu -> **Implemented**
+- selecting already connected device disconnects it -> **Implemented**

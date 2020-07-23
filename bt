@@ -221,8 +221,13 @@ case $choice in
 		[ "$dev_no" != "" ] && dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
 		if [ -n "$dev_id" ]; then
 			power on
-			bluetoothctl devices | grep -q "$dev_id" || bluetoothctl pair "$dev_id"
-			bluetoothctl connect "$dev_id"
+			if bluetoothctl info "$dev_id" | grep -q "Connected: yes"
+			then
+				bluetoothctl disconnect "$dev_id"
+			else
+				bluetoothctl devices | grep -q "$dev_id" || bluetoothctl pair "$dev_id"
+				bluetoothctl connect "$dev_id"
+			fi
 		fi;;
 esac
 
