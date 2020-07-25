@@ -1,7 +1,8 @@
 #!/bin/sh
 SCAN_PERIOD=5
 AUTOTRUST=false #trust every newly paired device
-AUTOSCAN=true #immediately start scanning when started to speed up pairing process
+AUTOSCAN=false #immediately start scanning when started to speed up pairing process
+
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
@@ -75,8 +76,9 @@ startup(){
 startup &
 update_pair_list &
 
+# include head command here to speed up launch if too many devices are listed (long uptime and long scanning will lead to this depending on your surroundings)
 # shellcheck disable=SC1091
-if bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -q "Connected: yes"
+if bluetoothctl devices | head | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -q "Connected: yes"
 then
 	actions="$(printf "disconnect\n%s" "$actions")"
 fi
