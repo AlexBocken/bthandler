@@ -148,7 +148,7 @@ pair(){
 				bluetoothctl trust "$dev_id"
 			fi
 			#if device is not already hard coded as paired, add to paired devices list
-			if [ "$( grep "$dev_id" "$PAIRLIST")" = "" ] || [ "$(wc -l "$PAIRLIST")" -eq 0 ] && $pair_succesful
+			if $pair_succesful && [ "$( grep "$dev_id" "$PAIRLIST")" = "" ] || [ "$(wc -l "$PAIRLIST")" -eq 0 ]
 			then
 				echo to be added to "$PAIRLIST":
 				echo Device "$dev_id" "$choice"
