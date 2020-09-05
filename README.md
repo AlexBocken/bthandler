@@ -54,12 +54,12 @@ This should only be an issue if `bluetoothctl scan off` is unreliable for you th
 
 # TODO
 
-- start scanning for new devices immediately at execution to save time when pairing new devices -> **Implemented**
-- auto-trust newly paired devices/trust device via dmenu -> **Implemented changeable via the AUTOTRUST variable in the beginning of bt, menu display adjusts accordingly**
-- blacklist devices via dmenu	-> **Implemented** (action is hidden, but typing `blacklist` as your choice will reveal the menu)
-- update bthandler internal paired devices list if something new shows up via `bluetoothctl paired-devices` not already listed in the paired devices file -> **Implemented**
-- only show disconnect option if devices are already connected -> **Implemented**
-- find a way to get something similar to `grep -vf` without the need of temp files.
-- only list connected devices to disconnect from, not all paired devices -> **Implemented**
-- only list not trusted devices in trust menu -> **Implemented**
-- selecting already connected device disconnects it -> **Implemented**
+- [x] start scanning for new devices immediately at execution to save time when pairing new devices
+- [x] auto-trust newly paired devices/trust device via dmenu (changeable via the AUTOTRUST variable in the beginning of bt, menu display adjusts accordingly)
+- [x] blacklist devices via dmenu (action is hidden, but typing `blacklist` as your choice will reveal the menu)
+- [x] update bthandler internal paired devices list if something new shows up via `bluetoothctl paired-devices` not already listed in the paired devices file
+- [x] only show disconnect option if devices are already connected
+- [ ] find a way to get something similar to `grep -vf` without the need of temp files.
+- [x] only list connected devices to disconnect from, not all paired devices
+- [x] only list not trusted devices in trust menu
+- [x] selecting already connected device disconnects it
