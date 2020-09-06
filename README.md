@@ -10,7 +10,7 @@ A simple interactive tool to:
 
 all via dmenu. Should be easily extendable by editing the `actions` string.
 
-<img src="/../assets/cropped.png" alt="cropped preview" width="1800">
+<img src="/../assets/cropped.png" alt="cropped preview" width="100%">
 
 # Installation
 Edit the Makefile to reflect your preffered installation destination. Then, simply
