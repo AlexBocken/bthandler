@@ -2,6 +2,9 @@
 SCAN_PERIOD=5
 AUTOTRUST=false #trust every newly paired device
 AUTOSCAN=false #immediately start scanning when started to speed up pairing process
+#If you want to update symbols in your status bar add your details below:
+bar="dwmblocks"
+barsignal="4"
 
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
@@ -102,6 +105,7 @@ poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 cleanup(){
 	scan off
 	rm /tmp/bt_start_scan$$ 2> /dev/null
+	pkill -RTMIN+$barsignal $bar
 	exit 0
 }
 
