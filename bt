@@ -26,8 +26,11 @@ done
 
 power(){
 	powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
-	[ "$powerstatus" = "no" ] && [ "$1" = on ] && bluetoothctl power on
-	[ "$powerstatus" = "yes" ] && [ "$1" = off ] && bluetoothctl power off
+	if [ "$powerstatus" = "no" ]; then
+		[ "$1" = on ] && bluetoothctl power on
+	elif [ "$powerstatus" = "yes" ]; then
+		[ "$1" = off ] && bluetoothctl power off
+	fi
 }
 
 scan(){
@@ -117,12 +120,8 @@ pair(){
 	start_scan="$(cat /tmp/bt_start_scan$$)"
 	if [ $((( "$(date +'%s')" - "$start_scan" ))) -lt $SCAN_PERIOD ]; then
 		sleep_period="$((( "$SCAN_PERIOD" - "$( date +'%s')" + "$start_scan" )))"
-		if [ "$sleep_period" -eq 1 ]; then
-			notify-send "Bluetooth" "Searching for devices, please wait 1 second"
-		else
-			notify-send "Bluetooth" "Searching for devices, please wait $sleep_period seconds"
-		fi
-
+		[ "$sleep_period" -gt 1 ] && plural="s"
+		notify-send "Bluetooth" "Searching for devices, please wait $sleep_period second$plural"
 		sleep "$sleep_period"
 	fi
 	all_devices="$( bluetoothctl devices )"
