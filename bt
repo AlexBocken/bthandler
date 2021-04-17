@@ -118,8 +118,8 @@ pair(){
 	scan on
 	#check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
 	start_scan="$(cat /tmp/bt_start_scan$$)"
-	if [ $((( "$(date +'%s')" - "$start_scan" ))) -lt $SCAN_PERIOD ]; then
-		sleep_period="$((( "$SCAN_PERIOD" - "$( date +'%s')" + "$start_scan" )))"
+	if [ $(( $(date +'%s') - $start_scan )) -lt $SCAN_PERIOD ]; then
+		sleep_period="$(( $SCAN_PERIOD - $( date +'%s') + $start_scan ))"
 		[ "$sleep_period" -gt 1 ] && plural="s"
 		notify-send "Bluetooth" "Searching for devices, please wait $sleep_period second$plural"
 		sleep "$sleep_period"
