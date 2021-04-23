@@ -78,6 +78,14 @@ startup(){
 	fi
 }
 
+
+if [ "$1" = "edit" ]; then
+	case $2 in
+		"pairlist")${EDITOR:-vim} "$PAIRLIST" && exit;;
+		"blacklist")${EDITOR:-vim} "$BLACKLIST" && exit;;
+		*)true;;
+		esac
+fi
 #Sadly needs to be run without '&' for now, since it otherwise breaks start_scan variable
 startup &
 update_pair_list &
