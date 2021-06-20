@@ -2,7 +2,7 @@
 SCAN_PERIOD=5
 AUTOTRUST=false #trust every newly paired device
 AUTOSCAN=false #immediately start scanning when started to speed up pairing process
-#If you want to update symbols in your status bar add your details below:
+#If you want to update symbols in your statusbar add your details below:
 bar="dwmblocks"
 barsignal="4"
 
@@ -10,11 +10,9 @@ barsignal="4"
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
 
-actions="pair
-unpair"
+actions="$(printf 'pair\nunpair\n')"
 
-[ "$AUTOTRUST" = false ] && actions="${actions}
-trust"
+[ "$AUTOTRUST" = false ] && actions="$(printf '%s\ntrust\n' "$actions")"
 
 #Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
 for prog in dmenu bluetoothctl awk cat date nl; do
@@ -103,6 +101,7 @@ bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{
 
 #Compile list of all device Names of paired devices (from bluetoothctl and from hardcoded list)
 paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
+echo "paired_devices:$paired_devices"
 
 disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
 
@@ -159,7 +158,7 @@ pair(){
 				bluetoothctl trust "$dev_id"
 			fi
 			#if device is not already hard coded as paired, add to paired devices list
-			if $pair_succesful && [ "$( grep "$dev_id" "$PAIRLIST")" = "" ] || [ "$(wc -l "$PAIRLIST")" -eq 0 ]
+			if $pair_succesful && [ "$( grep "$dev_id" "$PAIRLIST")" = "" ] || [ "$(wc -l < "$PAIRLIST")" -eq 0 ]
 			then
 				echo to be added to "$PAIRLIST":
 				echo Device "$dev_id" "$choice"
