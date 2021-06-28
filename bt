@@ -9,6 +9,7 @@ barsignal="4"
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
 BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
 PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
+ALIASLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/alias
 
 actions="$(printf 'pair\nunpair\n')"
 
@@ -79,10 +80,12 @@ startup(){
 
 if [ "$1" = "edit" ]; then
 	case $2 in
-		"pairlist")${EDITOR:-vim} "$PAIRLIST" && exit;;
-		"blacklist")${EDITOR:-vim} "$BLACKLIST" && exit;;
+		"pairlist")${EDITOR:-vim} "$PAIRLIST";;
+		"blacklist")${EDITOR:-vim} "$BLACKLIST";;
+		"aliaslist")${EDITOR:-vim} "$ALIASLIST";;
 		*)true;;
 		esac
+	exit
 fi
 #Sadly needs to be run without '&' for now, since it otherwise breaks start_scan variable
 startup &
@@ -97,10 +100,21 @@ fi
 
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
-bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{print $2}' )"
+bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | awk '{print $2}' | sort -u )"
 
 #Compile list of all device Names of paired devices (from bluetoothctl and from hardcoded list)
-paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
+paired_devices_with_id="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=2; i<NF; i++) printf $i " "; print $NF}' )"
+#de-alias
+paired_devices="$(echo "$paired_devices_with_id" | while read -r device_line; do
+	id="$(echo "$device_line" | cut -d' ' -f1)"
+	if grep -q "$id" "$ALIASLIST"; then
+		grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
+	else
+		echo "$device_line" | cut -d' ' --complement -f1
+	fi
+done)"
+
+#paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 echo "paired_devices:$paired_devices"
 
 disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"

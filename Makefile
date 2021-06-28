@@ -16,6 +16,7 @@ install:
 	chmod 755 $(DESTDIR)/bt
 	touch $(DATA_DIR)/blacklist
 	touch $(DATA_DIR)/paired
+	touch $(DATA_DIR)/alias
 
 uninstall:
 	rm -f $(DESTDIR)/bt
@@ -27,5 +28,6 @@ clear:
 	mkdir -p $(DATA_DIR)
 	touch $(DATA_DIR)/paired
 	touch $(DATA_DIR)/blacklist
+	touch $(DATA_DIR)/alias
 
 .PHONY: install uninstall clear
