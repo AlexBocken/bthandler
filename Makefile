@@ -1,11 +1,9 @@
 # bthandler
 # See LICENSE file for copyright and license details.
 
-VERSION = 1.1
-
 # paths
-DESTDIR= ~/.local/bin
-DATA_DIR = ~/.local/share/bt#if changed, needs adjustment in bt as well (defined in the beginning)
+DESTDIR = /usr/local/bin
+DATA_DIR = ~/.config/bt#if changed, needs adjustment in bt as well (defined in the beginning)
 SRC = bt
 
 

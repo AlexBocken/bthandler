@@ -7,9 +7,9 @@ bar="dwmblocks"
 barsignal="4"
 
 #locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
-BLACKLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/blacklist
-PAIRLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/paired
-ALIASLIST=${XDG_DATA_HOME:-$HOME/.local/share}/bt/alias
+BLACKLIST=${XDG_CONFIG_HOMe:-$HOME/.config}/bt/blacklist
+PAIRLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/paired
+ALIASLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/alias
 
 actions="$(printf 'pair\nunpair\n')"
 
