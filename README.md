@@ -59,7 +59,7 @@ This should only be an issue if `bluetoothctl scan off` is unreliable for you th
 - [x] blacklist devices via dmenu (action is hidden, but typing `blacklist` as your choice will reveal the menu)
 - [x] update bthandler internal paired devices list if something new shows up via `bluetoothctl paired-devices` not already listed in the paired devices file
 - [x] only show disconnect option if devices are already connected
-- [ ] find a way to get something similar to `grep -vf` without the need of temp files.
 - [x] only list connected devices to disconnect from, not all paired devices
 - [x] only list not trusted devices in trust menu
 - [x] selecting already connected device disconnects it
+- [ ] create alias for devices via dmenu
