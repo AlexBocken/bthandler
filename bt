@@ -250,7 +250,11 @@ case $choice in
 			then
 				bluetoothctl disconnect "$dev_id"
 			else
-				bluetoothctl paired-devices | grep -q "$dev_id" || bluetoothctl pair "$dev_id"
+				if bluetoothctl paired-devices | grep -q "$dev_id"; then
+					scan on
+					bluetoothctl pair "$dev_id"
+					scan off #maybe do not force off? -> implement return codes for scan()?
+				fi
 				bluetoothctl connect "$dev_id"
 			fi
 		fi;;
