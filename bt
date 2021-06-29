@@ -251,7 +251,7 @@ case $choice in
 			then
 				bluetoothctl disconnect "$dev_id"
 			else
-				bluetoothctl devices | grep -q "$dev_id" || bluetoothctl pair "$dev_id"
+				bluetoothctl paired-devices | grep -q "$dev_id" || bluetoothctl pair "$dev_id"
 				bluetoothctl connect "$dev_id"
 			fi
 		fi;;
