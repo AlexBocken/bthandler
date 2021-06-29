@@ -222,12 +222,18 @@ case $choice in
 	"disconnect")
 		#search through all devices which are connected and only list those as options
 		# shellcheck disable=SC1091
-		connected_devices="$( bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(Alias:|Connected:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Connected: yes" | awk -F ';' '{print $1}' )"
-		echo "$connected_devices"
+		connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
+		connected_devices="$(echo "$connected_ids" | while read -r id; do
+			if grep -q "$id" "$ALIASLIST"; then
+				grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
+			else
+				grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
+			fi
+		done)"
 		#only open dmenu prompt if there is more than one connected device
 		if [ "$( echo "$connected_devices" | wc -l )" -gt 1 ]
 		then
-			choice=$( echo "$connected_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+			choice=$( echo "$connected_devices" | dmenu -l 10 -i -p 'disconnect which paired device?')
 	        else
 			choice="$connected_devices"
 		fi
