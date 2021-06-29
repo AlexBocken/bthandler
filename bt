@@ -62,14 +62,6 @@ update_pair_list(){
 
 #start scanning as early as possible to speed up pairing process
 startup(){
-	#remove old tmp files
-	for f in /tmp/*
-	do
-	  case $f in
-	    /tmp/bt_start_scan*) rm "$f";;
-	    *) true;;
-	  esac
-	done
 	if $AUTOSCAN
 	then
 		power on
@@ -128,7 +120,7 @@ poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 
 cleanup(){
 	scan off
-	rm /tmp/bt_start_scan$$ 2> /dev/null
+	rm -f /tmp/bt_start_scan*
 	pkill -RTMIN+$barsignal $bar
 	exit 0
 }
@@ -220,7 +212,8 @@ case $choice in
 			bluetoothctl trust "$dev_id"
 		fi;;
 	"disconnect")
-		#search through all devices which are connected and only list those as options
+		#search through all devices and check which are connected
+		#only list those connceted devices as options
 		# shellcheck disable=SC1091
 		connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
 		connected_devices="$(echo "$connected_ids" | while read -r id; do
