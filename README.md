@@ -16,10 +16,8 @@ all via dmenu. Should be easily extendable by editing the `actions` string.
 Edit the Makefile to reflect your preffered installation destination. Then, simply
 
 ```bash
-make install
+sudo make install
 ```
-
-**Note:** If you don't change the Makefile `sudo` is not required and might break the blacklist and hardcoded pair list.
 
 Afterwards, invoking `bt` will start the menu.
 
