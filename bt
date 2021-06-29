@@ -38,13 +38,15 @@ scan(){
 		#sets variable in case scanning was no already on before the start of bt
 		[ -f /tmp/bt_start_scan$$ ] || start_scan="$( date +'%s' )"
 		if [ "$scanstatus" = "no" ]; then
-			bluetoothctl scan on &
+			echo "off"
+			bluetoothctl scan on 2>&1 /dev/null &
 			start_scan="$( date +'%s' )"
 		fi
 		echo "$start_scan" > /tmp/bt_start_scan$$
 	elif [ "$1" = off ]; then
 		if [ "$scanstatus" = "yes" ]; then
-			bluetoothctl scan off
+			echo "on"
+			bluetoothctl scan off 2>&1 /dev/null
 		fi
 	fi
 }
@@ -65,7 +67,7 @@ startup(){
 	if $AUTOSCAN
 	then
 		power on
-		scan on
+		scan on > /dev/null
 	fi
 }
 
@@ -128,7 +130,7 @@ cleanup(){
 pair(){
 	#since this function can get called indefinitely, make sure to always be scanning and controller has power in the case that it got deactived by some other process.
 	power on
-	scan on
+	scan on > /dev/null
 	#check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
 	start_scan="$(cat /tmp/bt_start_scan$$)"
 	if [ $(( $(date +'%s') - $start_scan )) -lt $SCAN_PERIOD ]; then
@@ -178,7 +180,7 @@ case $choice in
 	"power on") bluetoothctl power on;;
 	"power off") bluetoothctl power off;;
 	"scan on") bluetoothctl power on && echo power on && sleep 2
-		([ -n "$TERMINAL" ] && $TERMINAL -e bluetoothctl scan on ) || st bluetoothctl scan on;;
+		([ -n "$TERMINAL" ] && $TERMINAL -e bluetoothctl scan on ) || st bluetoothctl scan on > /dev/null;;
 	"pair") pair;;
 	"unpair") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
 		if [ -n "$choice" ]; then
@@ -251,9 +253,9 @@ case $choice in
 				bluetoothctl disconnect "$dev_id"
 			else
 				if bluetoothctl paired-devices | grep -q "$dev_id"; then
-					scan on
+					old_scan_state="$(scan on)"
 					bluetoothctl pair "$dev_id"
-					scan off #maybe do not force off? -> implement return codes for scan()?
+					scan "$old_scan_state"
 				fi
 				bluetoothctl connect "$dev_id"
 			fi
