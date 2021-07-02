@@ -38,15 +38,13 @@ scan(){
 		#sets variable in case scanning was no already on before the start of bt
 		[ -f /tmp/bt_start_scan$$ ] || start_scan="$( date +'%s' )"
 		if [ "$scanstatus" = "no" ]; then
-			echo "off"
-			bluetoothctl scan on 2>&1 /dev/null &
+			bluetoothctl scan on  &
 			start_scan="$( date +'%s' )"
 		fi
 		echo "$start_scan" > /tmp/bt_start_scan$$
 	elif [ "$1" = off ]; then
 		if [ "$scanstatus" = "yes" ]; then
-			echo "on"
-			bluetoothctl scan off 2>&1 /dev/null
+			bluetoothctl scan off
 		fi
 	fi
 }
@@ -85,19 +83,22 @@ fi
 startup &
 update_pair_list &
 
-# include head command here to speed up launch if too many devices are listed (long uptime and long scanning will lead to this depending on your surroundings)
-# shellcheck disable=SC1091
-if bluetoothctl devices | head | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -q "Connected: yes"
-then
-	actions="$(printf "disconnect\n%s" "$actions")"
-fi
+connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
+connected_devices="$(echo "$connected_ids" | while read -r id; do
+	if grep -q "$id" "$ALIASLIST"; then
+		grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
+	else
+		grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
+	fi
+done)"
 
+[ -z "$connected_devices" ] && actions="$(printf "disconnect\n%s" "$actions")"
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
 bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | awk '{print $2}' | sort -u )"
 
 #Compile list of all device Names of paired devices (from bluetoothctl and from hardcoded list)
-paired_devices_with_id="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=2; i<NF; i++) printf $i " "; print $NF}' )"
+paired_devices_with_id="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | cut -d' ' --complement -f1)"
 #de-alias
 paired_devices="$(echo "$paired_devices_with_id" | while read -r device_line; do
 	id="$(echo "$device_line" | cut -d' ' -f1)"
@@ -108,17 +109,26 @@ paired_devices="$(echo "$paired_devices_with_id" | while read -r device_line; do
 	fi
 done)"
 
-#paired_devices="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 echo "paired_devices:$paired_devices"
 
-disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST"  )"
+disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST" )"
+
+#show which devices are connected in menu
+disp_devices_with_links="$(echo "$paired_devices" | while read -r device; do
+	printf '%s' "$device"
+	if echo "$device" | grep -q "$connected_devices"; then
+		printf '🔗'
+	fi
+	printf '\n'
+done
+)"
 
 #detects current power mode of controller and adjusts options accordingly
 powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
 poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 #Don't print empty device list, removes unnecessary empty choice in dmenu
-[ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$actions" "$poweroption" | dmenu -i -p 'What BT action would you like to perform:' )
-[ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices" && printf "%s\n%s" "$actions" "$poweroption" ) | dmenu -i -p 'What BT action would you like to perform:' )
+[ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$actions" "$poweroption" | dmenu -i -p 'What BT action would you like to perform:' | tr -d '🔗')
+[ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices_with_links" && printf "%s\n%s" "$actions" "$poweroption" ) | dmenu -i -p 'What BT action would you like to perform:' | tr -d '🔗')
 
 cleanup(){
 	scan off
@@ -136,7 +146,7 @@ pair(){
 	if [ $(( $(date +'%s') - $start_scan )) -lt $SCAN_PERIOD ]; then
 		sleep_period="$(( $SCAN_PERIOD - $( date +'%s') + $start_scan ))"
 		[ "$sleep_period" -gt 1 ] && plural="s"
-		notify-send "Bluetooth" "Searching for devices, please wait $sleep_period second$plural"
+		notify-send "bt" "Searching for devices, please wait $sleep_period second$plural"
 		sleep "$sleep_period"
 	fi
 	all_devices="$( bluetoothctl devices )"
@@ -206,7 +216,7 @@ case $choice in
 		then
 			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'remove which paired device?')
 		else
-			notify-send "Bluetooth" "No paired devices that are not trusted"
+			notify-send "bt" "No paired devices that are not trusted"
 		fi
 		if [ -n "$choice" ]; then
 			dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
@@ -244,19 +254,28 @@ case $choice in
 			echo "$choice" >> "$BLACKLIST"
 		fi;;
 	*)
+		echo "choice: $choice"
 		dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 		[ "$dev_no" != "" ] && dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
+		echo "dev_id: $dev_id"
 		if [ -n "$dev_id" ]; then
 			power on
 			if bluetoothctl info "$dev_id" | grep -q "Connected: yes"
 			then
+				echo Was connceted... disconnecting
 				bluetoothctl disconnect "$dev_id"
 			else
-				if bluetoothctl paired-devices | grep -q "$dev_id"; then
-					old_scan_state="$(scan on)"
+				if ! bluetoothctl paired-devices | grep -q "$dev_id"; then
+					echo "not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
+					notify-send "bt" "device not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
+					scan on
+					echo "Scan on"
+					sleep 5
+					echo Attempting to pair...
 					bluetoothctl pair "$dev_id"
-					scan "$old_scan_state"
+					scan off
 				fi
+				echo connecting...
 				bluetoothctl connect "$dev_id"
 			fi
 		fi;;
