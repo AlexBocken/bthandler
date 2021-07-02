@@ -12,6 +12,9 @@ PAIRLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/paired
 ALIASLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/alias
 
 actions="$(printf 'pair\nunpair\n')"
+#disconnect menu does not need to be displayed since just directly selecting the connected device will disconnect it
+#set to anything non-empty to enable
+include_disconnect_option=""
 
 [ "$AUTOTRUST" = false ] && actions="$(printf '%s\ntrust\n' "$actions")"
 
@@ -84,7 +87,9 @@ connected_devices="$(echo "$connected_ids" | while read -r id; do
 	fi
 done)"
 
-[ -z "$connected_devices" ] && actions="$(printf "disconnect\n%s" "$actions")"
+[ -n "$include_disconnect_option" ] &&
+	[ -n "$connected_devices" ] &&
+	actions="$(printf "disconnect\n%s" "$actions")"
 
 #Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
 bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | awk '{print $2}' | sort -u )"
