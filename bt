@@ -15,14 +15,6 @@ actions="$(printf 'pair\nunpair\n')"
 
 [ "$AUTOTRUST" = false ] && actions="$(printf '%s\ntrust\n' "$actions")"
 
-#Checks for necessary programs to be present. Very unlikely not to be present but let's just err on the safer side.
-for prog in dmenu bluetoothctl awk cat date nl; do
-   if ! hash "$prog" 2>/dev/null; then
-      printf 'bthandler: %s: command not found\n' "$prog" >&2
-      exit 127
-   fi
-done
-
 power(){
 	powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
 	if [ "$powerstatus" = "no" ]; then
@@ -127,8 +119,13 @@ done
 powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
 poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
 #Don't print empty device list, removes unnecessary empty choice in dmenu
-[ "$disp_devices" = "" ] && choice=$( printf "%s\n%s" "$actions" "$poweroption" | dmenu -i -p 'What BT action would you like to perform:' | tr -d '🔗')
-[ "$disp_devices" != "" ] && choice=$( ( echo "$disp_devices_with_links" && printf "%s\n%s" "$actions" "$poweroption" ) | dmenu -i -p 'What BT action would you like to perform:' | tr -d '🔗')
+if [ "$disp_devices" = "" ];then
+	choice=$( printf "%s\n%s" "$actions" "$poweroption" |
+		dmenu -i -p 'What BT action would you like to perform:')
+else
+	choice=$( ( echo "$disp_devices_with_links" && printf "%s\n%s" "$actions" "$poweroption" ) |
+		dmenu -i -p 'What BT action would you like to perform:' | tr -d '🔗')
+fi
 
 cleanup(){
 	scan off
