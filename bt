@@ -1,20 +1,6 @@
 #!/bin/sh
-SCAN_PERIOD=5
-AUTOTRUST=false #trust every newly paired device
-AUTOSCAN=false #immediately start scanning when started to speed up pairing process
-#If you want to update symbols in your statusbar add your details below:
-bar="dwmblocks"
-barsignal="4"
-
-#locations of blacklist and hard coded list of paired devices (watch out, need to modify Makefile as well if you want to change these values and still use make install)
-BLACKLIST=${XDG_CONFIG_HOMe:-$HOME/.config}/bt/blacklist
-PAIRLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/paired
-ALIASLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/alias
-
-actions="$(printf 'pair\nunpair\n')"
-#disconnect menu does not need to be displayed since just directly selecting the connected device will disconnect it
-#set to anything non-empty to enable
-include_disconnect_option=""
+#load config
+. "${XDG_CONFIG_HOME:-$HOME/.config}/bt/config"
 
 [ "$AUTOTRUST" = false ] && actions="$(printf '%s\ntrust\n' "$actions")"
 
@@ -272,7 +258,7 @@ case $choice in
 					notify-send "bt" "device not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
 					scan on
 					echo "Scan on"
-					sleep 5
+					sleep $SCAN_PERIOD
 					echo Attempting to pair...
 					bluetoothctl pair "$dev_id"
 					scan off
