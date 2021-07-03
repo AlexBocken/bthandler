@@ -65,6 +65,8 @@ startup &
 update_pair_list &
 
 connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
+
+[ -z "$connected_ids" ] ||
 connected_devices="$(echo "$connected_ids" | while read -r id; do
 	if grep -q "$id" "$ALIASLIST"; then
 		grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
@@ -99,7 +101,9 @@ disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST" )"
 #show which devices are connected in menu
 disp_devices_with_links="$(echo "$paired_devices" | while read -r device; do
 	printf '%s' "$device"
-	if echo "$device" | grep -q "$connected_devices"; then
+	if [ -n "$connected_devices" ] &&
+		echo "$device" | grep -q "$connected_devices"
+		then
 		printf '🔗'
 	fi
 	printf '\n'
@@ -258,7 +262,7 @@ case $choice in
 					notify-send "bt" "device not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
 					scan on
 					echo "Scan on"
-					sleep $SCAN_PERIOD
+					sleep "$SCAN_PERIOD"
 					echo Attempting to pair...
 					bluetoothctl pair "$dev_id"
 					scan off
