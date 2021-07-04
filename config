@@ -12,5 +12,4 @@ ALIASLIST=${XDG_CONFIG_HOME:-$HOME/.config}/bt/alias
 
 actions="$(printf 'pair\nunpair\n')"
 #disconnect menu does not need to be displayed since just directly selecting the connected device will disconnect it
-#set to anything non-empty to enable
-include_disconnect_option=""
+include_disconnect_option=false

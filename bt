@@ -2,7 +2,7 @@
 #load config
 . "${XDG_CONFIG_HOME:-$HOME/.config}/bt/config"
 
-[ "$AUTOTRUST" = false ] && actions="$(printf '%s\ntrust\n' "$actions")"
+"$AUTOTRUST" || actions="$(printf '%s\ntrust\n' "$actions")"
 
 power(){
 	powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
@@ -35,6 +35,7 @@ update_pair_list(){
 	btctl_paired_devices="$(bluetoothctl paired-devices)"
 	if [ -n "$btctl_paired_devices" ]
 	then
+		#needs temp var as it writes into the same file as it reads from
 		btctl_not_in_list="$( echo "$btctl_paired_devices" | grep -vf "$PAIRLIST")"
 		[ -n "$btctl_not_in_list" ] && echo "$btctl_not_in_list" >> "$PAIRLIST"
 	fi
@@ -46,7 +47,7 @@ startup(){
 	if $AUTOSCAN
 	then
 		power on
-		scan on > /dev/null
+		scan on
 	fi
 }
 
@@ -60,7 +61,7 @@ if [ "$1" = "edit" ]; then
 		esac
 	exit
 fi
-#Sadly needs to be run without '&' for now, since it otherwise breaks start_scan variable
+
 startup &
 update_pair_list &
 
@@ -75,15 +76,13 @@ connected_devices="$(echo "$connected_ids" | while read -r id; do
 	fi
 done)"
 
-[ -n "$include_disconnect_option" ] &&
+"$include_disconnect_option" &&
 	[ -n "$connected_devices" ] &&
 	actions="$(printf "disconnect\n%s" "$actions")"
 
-#Compile list of all Bluetooth IDS of paired devices (from bluetoothctl and from hardcoded list)
-bt_IDS="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | awk '{print $2}' | sort -u )"
-
 #Compile list of all device Names of paired devices (from bluetoothctl and from hardcoded list)
 paired_devices_with_id="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | cut -d' ' --complement -f1)"
+bt_IDS="$(echo "$paired_devices_with_id" | cut -d' ' -f1)"
 #de-alias
 paired_devices="$(echo "$paired_devices_with_id" | while read -r device_line; do
 	id="$(echo "$device_line" | cut -d' ' -f1)"
@@ -135,8 +134,8 @@ pair(){
 	scan on > /dev/null
 	#check whether $SCAN_PERIOD seconds has already passed since starting scanning, if not, wait for the rest of that time.
 	start_scan="$(cat /tmp/bt_start_scan$$)"
-	if [ $(( $(date +'%s') - $start_scan )) -lt $SCAN_PERIOD ]; then
-		sleep_period="$(( $SCAN_PERIOD - $( date +'%s') + $start_scan ))"
+	if [ $(( $(date +'%s') - start_scan )) -lt "$SCAN_PERIOD" ]; then
+		sleep_period="$(( SCAN_PERIOD - $( date +'%s') + start_scan ))"
 		[ "$sleep_period" -gt 1 ] && plural="s"
 		notify-send "bt" "Searching for devices, please wait $sleep_period second$plural"
 		sleep "$sleep_period"
@@ -266,7 +265,7 @@ case $choice in
 						start_scan="$(cat /tmp/bt_start_scan$$)"
 						echo "Scan on"
 						notify-send "bt" "Scanning for new devices until wanted device has been found"
-						while ! echo "$dev_id" | grep -q "$all_devices"; do
+						until echo "$dev_id" | grep -q "$all_devices"; do
 							sleep 1
 							all_devices="$(bluetoothctl devices | cut -d' ' -f2)"
 							time_scanned="$(( $(date +'%s') - start_scan ))"
