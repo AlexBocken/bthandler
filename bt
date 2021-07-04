@@ -259,10 +259,14 @@ case $choice in
 			else
 				if ! bluetoothctl paired-devices | grep -q "$dev_id"; then
 					echo "not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
-					notify-send "bt" "device not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
-					scan on
-					echo "Scan on"
-					sleep "$SCAN_PERIOD"
+					notify-send "bt" "device not in paired-devices list, re-pairing"
+					all_devices="$(bluetoothctl devices | cut -d' ' -f2)"
+					if ! echo "$dev_id" | grep -q "$all_devices"; then
+						scan on
+						echo "Scan on"
+						notify-send "bt" "Scanning for new devices..."
+						sleep "$SCAN_PERIOD"
+					fi
 					echo Attempting to pair...
 					bluetoothctl pair "$dev_id"
 					scan off
