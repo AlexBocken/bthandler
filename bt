@@ -1,7 +1,8 @@
 #!/bin/sh
 #load config
-#shellcheck disable=SC1091
-. "${XDG_CONFIG_HOME:-$HOME/.config}/bt/config"
+CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/bt/config"
+#shellcheck disable=SC1090
+. "$CONFIG"
 
 "$AUTOTRUST" || actions="$(printf '%s\ntrust\n' "$actions")"
 
@@ -55,9 +56,10 @@ startup(){
 
 if [ "$1" = "edit" ]; then
 	case $2 in
-		"pairlist")${EDITOR:-vim} "$PAIRLIST";;
+		"config")${EDITOR:-vim} "$CONFIG";;
+		"paired")${EDITOR:-vim} "$PAIRLIST";;
 		"blacklist")${EDITOR:-vim} "$BLACKLIST";;
-		"aliaslist")${EDITOR:-vim} "$ALIASLIST";;
+		"alias")${EDITOR:-vim} "$ALIASLIST";;
 		*)true;;
 		esac
 	exit
