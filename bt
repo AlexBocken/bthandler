@@ -1,5 +1,6 @@
 #!/bin/sh
 #load config
+#shellcheck disable=SC1091
 . "${XDG_CONFIG_HOME:-$HOME/.config}/bt/config"
 
 "$AUTOTRUST" || actions="$(printf '%s\ntrust\n' "$actions")"
@@ -65,6 +66,7 @@ fi
 startup &
 update_pair_list &
 
+# shellcheck disable=SC1091
 connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
 
 [ -z "$connected_ids" ] ||
@@ -93,7 +95,8 @@ paired_devices="$(echo "$paired_devices_with_id" | while read -r device_line; do
 	fi
 done)"
 
-echo "paired_devices:$paired_devices"
+echo "paired_devices:"
+echo "$paired_devices"
 
 disp_devices="$( echo "$paired_devices" | grep -vf "$BLACKLIST" )"
 
@@ -118,7 +121,7 @@ if [ "$disp_devices" = "" ];then
 		dmenu -i -p 'What BT action would you like to perform:')
 else
 	choice=$( ( echo "$disp_devices_with_links" && printf "%s\n%s" "$actions" "$poweroption" ) |
-		dmenu -i -p 'What BT action would you like to perform:' | tr -d '🔗')
+		dmenu -i -p 'What BT action would you like to perform:' | sed 's/🔗$//')
 fi
 
 cleanup(){
@@ -205,9 +208,9 @@ case $choice in
 		untrusted_devices="$( awk '{print "bluetoothctl info "$2}' "$PAIRLIST" | . /dev/stdin | grep -E '(Alias:|Trusted:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Trusted: no" | awk -F ';' '{print $1}' )"
 		if [ "$( echo "$untrusted_devices" | wc -l )" -gt 0 ]
 		then
-			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'trust which paired device?')
 		else
-			notify-send "bt" "No paired devices that are not trusted"
+			notify-send "bt" "No paired devices that are not trusted already."
 		fi
 		if [ -n "$choice" ]; then
 			dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
