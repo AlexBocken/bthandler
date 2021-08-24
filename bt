@@ -207,7 +207,14 @@ case $choice in
 	"trust")
 		#search through all devices which are connected and only list those as options
 		# shellcheck disable=SC1091
-		untrusted_devices="$( awk '{print "bluetoothctl info "$2}' "$PAIRLIST" | . /dev/stdin | grep -E '(Alias:|Trusted:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Trusted: no" | awk -F ';' '{print $1}' )"
+		untrusted_device_ids="$( awk '{print "bluetoothctl info "$2}' "$PAIRLIST" | . /dev/stdin | grep -E '(Device |Trusted:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Trusted: no" | cut -d' ' -f2 )"
+		untrusted_devices="$( echo "$untrusted_device_ids" | while read -r id; do
+			if grep -q "$id" "$ALIASLIST"; then
+				grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
+			else
+				grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
+			fi
+		done)"
 		if [ "$( echo "$untrusted_devices" | wc -l )" -gt 0 ]
 		then
 			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'trust which paired device?')
