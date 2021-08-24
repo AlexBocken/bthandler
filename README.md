@@ -71,7 +71,6 @@ A file where one can manually set alias names for specific devices. Useful if mu
 The syntax is:
 ```
 <MAC-adress> <new alias name>
-
 ```
 With spaces as delimiter.
 
