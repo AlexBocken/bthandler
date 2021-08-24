@@ -71,31 +71,28 @@ update_pair_list &
 # shellcheck disable=SC1091
 connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
 
-[ -z "$connected_ids" ] ||
-connected_devices="$(echo "$connected_ids" | while read -r id; do
-	if grep -q "$id" "$ALIASLIST"; then
-		grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
-	else
-		grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
-	fi
-done)"
+de_alias(){
+	while read -r id; do
+		if grep -q "$id" "$ALIASLIST"; then
+			grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
+		else
+			grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
+		fi
+	done
+}
 
+
+[ -z "$connected_ids" ] ||
+connected_devices="$( echo "$connected_ids" | de_alias )"
+
+# shellcheck disable=SC2154
 "$include_disconnect_option" &&
 	[ -n "$connected_devices" ] &&
 	actions="$(printf "disconnect\n%s" "$actions")"
 
-#Compile list of all device Names of paired devices (from bluetoothctl and from hardcoded list)
-paired_devices_with_id="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | cut -d' ' --complement -f1)"
-bt_IDS="$(echo "$paired_devices_with_id" | cut -d' ' -f1)"
-#de-alias
-paired_devices="$(echo "$paired_devices_with_id" | while read -r device_line; do
-	id="$(echo "$device_line" | cut -d' ' -f1)"
-	if grep -q "$id" "$ALIASLIST"; then
-		grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
-	else
-		echo "$device_line" | cut -d' ' --complement -f1
-	fi
-done)"
+#Compile list of all device ids of paired devices (from bluetoothctl and from hardcoded list)
+connected_ids="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | cut -d' '  -f2)"
+paired_devices="$( echo "$connected_ids" | de_alias )"
 
 echo "paired_devices:"
 echo "$paired_devices"
@@ -208,13 +205,7 @@ case $choice in
 		#search through all devices which are connected and only list those as options
 		# shellcheck disable=SC1091
 		untrusted_device_ids="$( awk '{print "bluetoothctl info "$2}' "$PAIRLIST" | . /dev/stdin | grep -E '(Device |Trusted:)' | sed -e  'N;s/\n/;/;s/^.?*Alias: //' | grep "Trusted: no" | cut -d' ' -f2 )"
-		untrusted_devices="$( echo "$untrusted_device_ids" | while read -r id; do
-			if grep -q "$id" "$ALIASLIST"; then
-				grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
-			else
-				grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
-			fi
-		done)"
+		untrusted_devices="$( echo "$untrusted_device_ids" | de_alias )"
 		if [ "$( echo "$untrusted_devices" | wc -l )" -gt 0 ]
 		then
 			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'trust which paired device?')
@@ -231,13 +222,7 @@ case $choice in
 		#only list those connceted devices as options
 		# shellcheck disable=SC1091
 		connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
-		connected_devices="$(echo "$connected_ids" | while read -r id; do
-			if grep -q "$id" "$ALIASLIST"; then
-				grep "$id" "$ALIASLIST" | cut -d' ' --complement -f1
-			else
-				grep "$id" "$PAIRLIST" | cut -d' ' --complement -f1,2
-			fi
-		done)"
+		connected_devices="$( echo "$connected_ids" | de_alias )"
 		#only open dmenu prompt if there is more than one connected device
 		if [ "$( echo "$connected_devices" | wc -l )" -gt 1 ]
 		then
@@ -259,7 +244,7 @@ case $choice in
 	*)
 		echo "choice: $choice"
 		dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
-		[ "$dev_no" != "" ] && dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
+		[ "$dev_no" != "" ] && dev_id=$( echo "$connected_ids" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}')
 		echo "dev_id: $dev_id"
 		if [ -n "$dev_id" ]; then
 			power on
