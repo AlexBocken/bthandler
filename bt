@@ -37,6 +37,10 @@ update_pair_list(){
 	btctl_paired_devices="$(bluetoothctl paired-devices)"
 	if [ -n "$btctl_paired_devices" ]
 	then
+		#do not modify files when issues occur
+		if echo "$btctl_paired_devices" | grep -q "No default controller available"; then
+			return
+		fi
 		#needs temp var as it writes into the same file as it reads from
 		btctl_not_in_list="$( echo "$btctl_paired_devices" | grep -vf "$PAIRLIST")"
 		[ -n "$btctl_not_in_list" ] && echo "$btctl_not_in_list" >> "$PAIRLIST"
@@ -141,17 +145,16 @@ pair(){
 		[ "$sleep_period" -gt 1 ] && plural="s"
 		notify-send "bt" "Searching for devices, please wait $sleep_period second$plural"
 		sleep "$sleep_period"
+		unset plural
 	fi
 	all_devices="$( bluetoothctl devices )"
 	if [ "$paired_devices" = "" ]; then
 		new_devices="$( echo "$all_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 		bt_IDS="$( echo "$all_devices" | awk '{print $2}' )"
 	else
-		#echo "$paired_devices" > /tmp/paired_devices$$
 		filtered_devices="$( echo "$all_devices" | grep -v "$paired_devices")"
 		bt_IDS="$( echo "$filtered_devices" | awk '{print $2}' )"
 		new_devices="$( echo "$filtered_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
-		#rm /tmp/paired_devices$$
 	fi
 	[ "$new_devices" = "" ] && options="rescan" || options=$(echo "$new_devices" && echo 'rescan')
 	choice=$( echo "$options" | dmenu -l 10 -i -p 'pair with which device?' )
@@ -162,7 +165,7 @@ pair(){
 			pair
 		else
 			dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
-			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
+			dev_id=$( echo "$bt_IDS" | nl | grep -P "^ *$dev_no\t" | awk '{print $2}' )
 			#only attempt to connect if pairing succeeds
 			bluetoothctl pair "$dev_id" && ( pair_succesful=true && bluetoothctl connect "$dev_id" ) || pair_succesful=false
 			if $AUTOTRUST; then
