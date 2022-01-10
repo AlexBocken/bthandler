@@ -118,13 +118,19 @@ done
 #detects current power mode of controller and adjusts options accordingly
 powerstatus="$( bluetoothctl show | grep Powered | awk '{print $2}' )"
 poweroption="$( echo "$powerstatus" | sed 's/yes/power off/; s/no/power on/' )"
-#Don't print empty device list, removes unnecessary empty choice in dmenu
-if [ "$disp_devices" = "" ];then
-	choice=$( printf "%s\n%s" "$actions" "$poweroption" |
-		dmenu -i -p 'What BT action would you like to perform:')
+
+#read cmd arguments if available
+if [ -z "$1" ]; then
+	#Don't print empty device list, removes unnecessary empty choice in dmenu
+	if [ "$disp_devices" = "" ];then
+		choice=$( printf "%s\n%s" "$actions" "$poweroption" |
+			dmenu -i -p 'What BT action would you like to perform:')
+	else
+		choice=$( ( echo "$disp_devices_with_links" && printf "%s\n%s" "$actions" "$poweroption" ) |
+			dmenu -i -p 'What BT action would you like to perform:' | sed 's/🔗$//')
+	fi
 else
-	choice=$( ( echo "$disp_devices_with_links" && printf "%s\n%s" "$actions" "$poweroption" ) |
-		dmenu -i -p 'What BT action would you like to perform:' | sed 's/🔗$//')
+	choice="$1"
 fi
 
 cleanup(){
@@ -157,12 +163,23 @@ pair(){
 		new_devices="$( echo "$filtered_devices" | awk '{for (i=3; i<NF; i++) printf $i " "; print $NF}' )"
 	fi
 	[ "$new_devices" = "" ] && options="rescan" || options=$(echo "$new_devices" && echo 'rescan')
-	choice=$( echo "$options" | dmenu -l 10 -i -p 'pair with which device?' )
+
+	if [ -z "$2" ]; then
+		choice=$( echo "$options" | dmenu -l 10 -i -p 'pair with which device?' )
+	else
+		if echo "$options" | grep -q "$1"; then
+			choice="$1"
+		else
+			echo "Device $1 not found." > /dev/stderr
+			exit 1
+		fi
+	fi
+
 	if [ -n "$choice" ]; then
 		if [ "$choice" = "rescan" ]; then
 			start_scan="$( date +'%s')"
 			echo "$start_scan" > /tmp/bt_start_scan$$
-			pair
+			pair "$1"
 		else
 			dev_no=$( echo "$new_devices" | nl | grep "$choice" | awk '{print $1}')
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^ *$dev_no\t" | awk '{print $2}' )
@@ -187,8 +204,18 @@ case $choice in
 	"power off") bluetoothctl power off;;
 	"scan on") bluetoothctl power on && echo power on && sleep 2
 		([ -n "$TERMINAL" ] && $TERMINAL -e bluetoothctl scan on ) || st bluetoothctl scan on > /dev/null;;
-	"pair") pair;;
-	"unpair") choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+	"pair") pair "$2";;
+	"unpair")
+		if [ -z "$2" ]; then
+			choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'remove which paired device?')
+		else
+			if echo "$paired_devices" | grep -q "$2";then
+				choice="$2"
+			else
+				echo "Device $2 not found." > /dev/stderr
+				exit 1
+			fi
+		fi
 		if [ -n "$choice" ]; then
 			dev_no=$( echo "$paired_devices" | nl | grep -P "[0-9]+\t$choice$" | awk '{print $1}')
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
@@ -211,7 +238,16 @@ case $choice in
 		untrusted_devices="$( echo "$untrusted_device_ids" | de_alias )"
 		if [ "$( echo "$untrusted_devices" | wc -l )" -gt 0 ]
 		then
-			choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'trust which paired device?')
+			if [ -z "$2" ]; then
+				choice=$( echo "$untrusted_devices" | dmenu -l 10 -i -p 'trust which paired device?')
+			else
+				if echo "$untrusted_devices" | grep -q "$2"; then
+					choice="$2"
+				else
+					echo "Device $2 not found." > /dev/stderr
+					exit 1
+				fi
+			fi
 		else
 			notify-send "bt" "No paired devices that are not trusted already."
 		fi
@@ -226,12 +262,21 @@ case $choice in
 		# shellcheck disable=SC1091
 		connected_ids="$(bluetoothctl devices | awk '{print "bluetoothctl info "$2}' | . /dev/stdin | grep -E '(^Device |Connected:)' | sed -e  'N;s/\n/;/' | grep 'Connected: yes' | cut -d' ' -f2,5)"
 		connected_devices="$( echo "$connected_ids" | de_alias )"
-		#only open dmenu prompt if there is more than one connected device
-		if [ "$( echo "$connected_devices" | wc -l )" -gt 1 ]
-		then
-			choice=$( echo "$connected_devices" | dmenu -l 10 -i -p 'disconnect which paired device?')
-	        else
-			choice="$connected_devices"
+		if [ -z "$2" ]; then
+			#only open dmenu prompt if there is more than one connected device
+			if [ "$( echo "$connected_devices" | wc -l )" -gt 1 ]
+			then
+				choice=$( echo "$connected_devices" | dmenu -l 10 -i -p 'disconnect which paired device?')
+	        	else
+				choice="$connected_devices"
+			fi
+		else
+			if echo "$connected_devices" | grep -q "$2"; then
+				choice="$2"
+			else
+				echo "Device $2 not found." > /dev/stderr
+				exit 1
+			fi
 		fi
 		#only there was a choice (instead of canceling the dmenu)
 		if [ -n "$choice" ]; then
@@ -239,8 +284,17 @@ case $choice in
 			dev_id=$( echo "$bt_IDS" | nl | grep -P "^.*$dev_no\t" | awk '{print $2}' )
 			bluetoothctl disconnect "$dev_id"
 		fi;;
-	"blacklist")
-		choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'blacklist which paired device from selection?')
+	"blacklist") if [ -z "$2" ]; then
+			choice=$( echo "$paired_devices" | dmenu -l 10 -i -p 'blacklist which paired device from selection?')
+		else
+			if echo "$paired_devices" | grep -q "$2"; then
+				choice="$2"
+			else
+				echo "Device $2 not found." > /dev/stderr
+				exit 1
+			fi
+		fi
+
 		if [ -n "$choice" ]; then
 			echo "$choice" >> "$BLACKLIST"
 		fi;;
