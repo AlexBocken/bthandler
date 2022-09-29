@@ -32,9 +32,9 @@ scan(){
 	fi
 }
 
-#Check bluetoothctl paired-devices for new devices to be hardcoded into pair list
+#Check bluetoothctl devices Paired for new devices to be hardcoded into pair list
 update_pair_list(){
-	btctl_paired_devices="$(bluetoothctl paired-devices)"
+	btctl_paired_devices="$(bluetoothctl devices Paired)"
 	if [ -n "$btctl_paired_devices" ]
 	then
 		#do not modify files when issues occur
@@ -95,7 +95,7 @@ connected_devices="$( echo "$connected_ids" | de_alias )"
 	actions="$(printf "disconnect\n%s" "$actions")"
 
 #Compile list of all device ids of paired devices (from bluetoothctl and from hardcoded list)
-connected_ids="$( ( bluetoothctl paired-devices && cat "$PAIRLIST" ) | sort -u | cut -d' '  -f2)"
+connected_ids="$( ( bluetoothctl devices Paired && cat "$PAIRLIST" ) | sort -u | cut -d' '  -f2)"
 paired_devices="$( echo "$connected_ids" | de_alias )"
 
 echo "paired_devices:"
@@ -310,7 +310,7 @@ case $choice in
 				echo Was connceted... disconnecting
 				bluetoothctl disconnect "$dev_id"
 			else
-				if ! bluetoothctl paired-devices | grep -q "$dev_id"; then
+				if ! bluetoothctl devices Paired | grep -q "$dev_id"; then
 					echo "not in paired-devices list, re-adding (device needs to be in pairing mode for this)"
 					notify-send "bt" "device not in paired-devices list, re-pairing"
 					all_devices="$(bluetoothctl devices | cut -d' ' -f2)"
